@@ -1,0 +1,45 @@
+<?php
+
+use App\Http\Controllers\CompanyController;
+use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ProductController;
+use Illuminate\Support\Facades\Route;
+use Inertia\Inertia;
+use Laravel\Fortify\Features;
+
+Route::get('/', function () {
+    return Inertia::render('welcome', [
+        'canRegister' => Features::enabled(Features::registration()),
+    ]);
+})->name('home');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('dashboard', \App\Http\Controllers\DashboardController::class)->name('dashboard');
+
+    // Companies
+    Route::resource('companies', CompanyController::class)
+        ->middleware('can:viewAny,App\Models\Company');
+
+    // Customers
+    Route::resource('customers', CustomerController::class)
+        ->middleware('can:viewAny,App\Models\Customer');
+
+    // Products
+    Route::resource('products', ProductController::class)
+        ->middleware('can:viewAny,App\Models\Product');
+
+    // Product Categories
+    Route::post('product-categories', [\App\Http\Controllers\ProductCategoryController::class, 'store'])
+        ->name('product-categories.store');
+
+    // Documents
+    Route::resource('documents', DocumentController::class)
+        ->middleware('can:viewAny,App\Models\Document');
+
+    Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
+        ->name('documents.send-to-sunat')
+        ->middleware('can:sendToSunat,App\Models\Document');
+});
+
+require __DIR__ . '/settings.php';

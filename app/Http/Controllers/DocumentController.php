@@ -1,0 +1,309 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Http\Requests\StoreDocumentRequest;
+use App\Jobs\SendDocumentToSunat;
+use App\Models\CatalogDocumentType;
+use App\Models\Customer;
+use App\Models\Document;
+use App\Models\DocumentItem;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class DocumentController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request): Response
+    {
+        $user = $request->user();
+        $companyId = $user->company_id;
+        $isSuperAdmin = $user->hasRole('super-admin');
+
+        // Super-admin puede ver todos los documentos
+        if ($isSuperAdmin) {
+            $documents = Document::query()
+                ->when($request->search, function ($query, $search) {
+                    $query->where('series', 'like', "%{$search}%")
+                        ->orWhere('number', 'like', "%{$search}%");
+                })
+                ->when($request->document_type, function ($query, $type) {
+                    $query->where('document_type', $type);
+                })
+                ->when($request->status, function ($query, $status) {
+                    $query->where('status', $status);
+                })
+                ->with(['customer', 'documentType', 'company'])
+                ->latest('issue_date')
+                ->paginate(15);
+
+            // Transformar documentos para incluir solo el nombre del tipo
+            $documents->getCollection()->transform(function ($document) {
+                if ($document->documentType) {
+                    $document->document_type_name = $document->documentType->name;
+                    unset($document->documentType);
+                }
+                return $document;
+            });
+
+            $documentTypes = CatalogDocumentType::orderBy('name')->get();
+
+            return Inertia::render('Documents/Index', [
+                'documents' => $documents,
+                'documentTypes' => $documentTypes,
+                'filters' => $request->only(['search', 'document_type', 'status']),
+            ]);
+        }
+
+        // Usuarios normales necesitan estar asociados a una empresa
+        if (! $companyId) {
+            return Inertia::render('Documents/Index', [
+                'documents' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+                'documentTypes' => CatalogDocumentType::orderBy('name')->get(),
+                'filters' => $request->only(['search', 'document_type', 'status']),
+                'error' => 'Debe estar asociado a una empresa para ver documentos. Crea una empresa primero.',
+            ]);
+        }
+
+        $documents = Document::query()
+            ->where('company_id', $companyId)
+            ->when($request->search, function ($query, $search) {
+                $query->where('series', 'like', "%{$search}%")
+                    ->orWhere('number', 'like', "%{$search}%");
+            })
+            ->when($request->document_type, function ($query, $type) {
+                $query->where('document_type', $type);
+            })
+            ->when($request->status, function ($query, $status) {
+                $query->where('status', $status);
+            })
+            ->with(['customer', 'documentType'])
+            ->latest('issue_date')
+            ->paginate(15);
+
+        // Transformar documentos para incluir solo el nombre del tipo
+        $documents->getCollection()->transform(function ($document) {
+            if ($document->documentType) {
+                $document->document_type_name = $document->documentType->name;
+                unset($document->documentType);
+            }
+            return $document;
+        });
+
+        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+
+        return Inertia::render('Documents/Index', [
+            'documents' => $documents,
+            'documentTypes' => $documentTypes,
+            'filters' => $request->only(['search', 'document_type', 'status']),
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create(): Response
+    {
+        $user = request()->user();
+        $companyId = $user->company_id;
+        $isSuperAdmin = $user->hasRole('super-admin');
+
+        // Super-admin puede crear documentos pero necesita seleccionar empresa
+        if ($isSuperAdmin && ! $companyId) {
+            return Inertia::render('Documents/Create', [
+                'customers' => collect([]),
+                'documentTypes' => CatalogDocumentType::orderBy('name')->get(),
+                'error' => 'Como super-admin, debes seleccionar una empresa o asociarte a una para crear documentos.',
+            ]);
+        }
+
+        // Usuarios normales necesitan estar asociados a una empresa
+        if (! $isSuperAdmin && ! $companyId) {
+            return Inertia::render('Documents/Create', [
+                'customers' => collect([]),
+                'documentTypes' => collect([]),
+                'error' => 'Debe estar asociado a una empresa para crear documentos. Crea una empresa primero.',
+            ]);
+        }
+
+        $customers = Customer::where('company_id', $companyId)
+            ->orderBy('name')
+            ->get();
+
+        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+
+        return Inertia::render('Documents/Create', [
+            'customers' => $customers,
+            'documentTypes' => $documentTypes,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreDocumentRequest $request): RedirectResponse
+    {
+        $user = $request->user();
+        $data = $request->validated();
+        
+        // Si no viene company_id en el request, usar el del usuario
+        if (! isset($data['company_id'])) {
+            $data['company_id'] = $user->company_id;
+        }
+
+        // Validar que tenga company_id (excepto super-admin que puede especificarlo)
+        if (! $data['company_id'] && ! $user->hasRole('super-admin')) {
+            return redirect()->back()
+                ->withErrors(['company_id' => 'Debe estar asociado a una empresa para crear documentos.'])
+                ->withInput();
+        }
+
+        $items = $data['items'];
+        unset($data['items']);
+
+        // Convertir customer_id vacío a null
+        if (isset($data['customer_id']) && $data['customer_id'] === '') {
+            $data['customer_id'] = null;
+        }
+
+        $document = Document::create($data);
+
+        foreach ($items as $index => $item) {
+            DocumentItem::create([
+                'document_id' => $document->id,
+                'product_id' => $item['product_id'] ?? null,
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'total' => $item['total'],
+                'tax_type' => $item['tax_type'],
+                'igv' => $item['igv'] ?? 0,
+                'order' => $index + 1,
+            ]);
+        }
+
+        return redirect()->route('documents.show', $document)
+            ->with('success', 'Documento creado exitosamente.')
+            ->with('created_document_id', $document->id);
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Request $request, Document $document): Response
+    {
+        $user = $request->user();
+        
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para ver este documento.');
+        }
+
+        $document->load([
+            'company',
+            'customer',
+            'documentType',
+            'items.product',
+            'items.taxType',
+            'payments',
+            'taxes.taxType',
+            'sunatResponse',
+        ]);
+
+        // Preparar datos para Inertia
+        $documentData = $document->toArray();
+        if ($document->documentType) {
+            $documentData['document_type_obj'] = [
+                'name' => $document->documentType->name,
+            ];
+        }
+
+        return Inertia::render('Documents/Show', [
+            'document' => $documentData,
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Document $document): Response
+    {
+        if ($document->status !== 'PENDING') {
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'Solo se pueden editar documentos pendientes.');
+        }
+
+        $document->load(['items', 'payments', 'taxes']);
+
+        $customers = Customer::where('company_id', request()->user()->company_id)
+            ->orderBy('name')
+            ->get();
+
+        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+
+        return Inertia::render('Documents/Edit', [
+            'document' => $document,
+            'customers' => $customers,
+            'documentTypes' => $documentTypes,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Document $document): RedirectResponse
+    {
+        if ($document->status !== 'PENDING') {
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'Solo se pueden editar documentos pendientes.');
+        }
+
+        // TODO: Implement UpdateDocumentRequest
+        $document->update($request->only([
+            'customer_id',
+            'issue_date',
+            'currency',
+        ]));
+
+        return redirect()->route('documents.show', $document)
+            ->with('success', 'Documento actualizado exitosamente.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Document $document): RedirectResponse
+    {
+        if ($document->status !== 'PENDING') {
+            return redirect()->route('documents.index')
+                ->with('error', 'Solo se pueden eliminar documentos pendientes.');
+        }
+
+        $document->delete();
+
+        return redirect()->route('documents.index')
+            ->with('success', 'Documento eliminado exitosamente.');
+    }
+
+    /**
+     * Send document to SUNAT.
+     */
+    public function sendToSunat(Document $document): RedirectResponse
+    {
+        $this->authorize('sendToSunat', $document);
+
+        if ($document->status !== 'PENDING') {
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'Solo se pueden enviar documentos pendientes.');
+        }
+
+        SendDocumentToSunat::dispatch($document);
+
+        return redirect()->route('documents.show', $document)
+            ->with('success', 'Documento enviado a SUNAT. El proceso se está ejecutando en segundo plano.');
+    }
+}
