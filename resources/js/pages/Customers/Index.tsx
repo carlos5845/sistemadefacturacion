@@ -1,10 +1,27 @@
 import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Eye, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { SuccessModal } from '@/components/success-modal';
+import { ErrorModal } from '@/components/error-modal';
 import AppLayout from '@/layouts/app-layout';
 import { index, create } from '@/routes/customers';
 
@@ -39,10 +56,63 @@ interface Props {
 
 export default function CustomersIndex({ customers, filters, error }: Props) {
     const [search, setSearch] = useState(filters.search || '');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    // Manejar mensajes flash
+    useEffect(() => {
+        if (flash?.success) {
+            setSuccessMessage(flash.success);
+            setShowSuccessModal(true);
+        }
+        if (flash?.error) {
+            setErrorMessage(flash.error);
+            setShowErrorModal(true);
+        }
+    }, [flash]);
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
         router.get(index().url, { search }, { preserveState: true });
+    };
+
+    const handleDeleteClick = (customer: Customer) => {
+        setCustomerToDelete(customer);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!customerToDelete) {
+            return;
+        }
+
+        setIsDeleting(true);
+        router.delete(CustomerController.destroy.url(customerToDelete.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteDialogOpen(false);
+                setCustomerToDelete(null);
+                setIsDeleting(false);
+                setSuccessMessage('Cliente eliminado exitosamente.');
+                setShowSuccessModal(true);
+            },
+            onError: (errors) => {
+                setIsDeleting(false);
+                const errorMsg = typeof errors === 'string' ? errors : 'Error al eliminar el cliente.';
+                setErrorMessage(errorMsg);
+                setShowErrorModal(true);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            },
+        });
     };
 
     return (
@@ -106,13 +176,42 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                                         <td className="px-4 py-3">{customer.name}</td>
                                         <td className="px-4 py-3">{customer.email || '-'}</td>
                                         <td className="px-4 py-3">{customer.phone || '-'}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Link
-                                                href={CustomerController.show.url(customer.id)}
-                                                className="text-primary hover:underline"
-                                            >
-                                                Ver
-                                            </Link>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Link
+                                                                href={CustomerController.show.url(customer.id)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="sr-only">Ver cliente</span>
+                                                            </Link>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Ver cliente</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleDeleteClick(customer)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+                                                                type="button"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Eliminar cliente</span>
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Eliminar cliente</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -120,6 +219,58 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                         </tbody>
                     </table>
                 </div>
+
+                {/* Modal de confirmación de eliminación */}
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>¿Eliminar cliente?</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro de que deseas eliminar a{' '}
+                                <strong>{customerToDelete?.name}</strong>?
+                                <br />
+                                Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setCustomerToDelete(null);
+                                }}
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirm}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modales de éxito y error */}
+                <SuccessModal
+                    open={showSuccessModal}
+                    onClose={() => {
+                        setShowSuccessModal(false);
+                        setSuccessMessage('');
+                    }}
+                    message={successMessage}
+                />
+                <ErrorModal
+                    open={showErrorModal}
+                    onClose={() => {
+                        setShowErrorModal(false);
+                        setErrorMessage('');
+                    }}
+                    message={errorMessage}
+                />
             </div>
         </AppLayout>
     );

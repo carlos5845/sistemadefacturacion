@@ -122,6 +122,7 @@ class CustomerController extends Controller
     public function show(Customer $customer): Response
     {
         $customer->load(['company', 'documents']);
+        $customer->documents_count = $customer->documents()->count();
 
         return Inertia::render('Customers/Show', [
             'customer' => $customer,
@@ -152,8 +153,22 @@ class CustomerController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Customer $customer): RedirectResponse
+    public function destroy(Request $request, Customer $customer): RedirectResponse
     {
+        $user = $request->user();
+        $isSuperAdmin = $user->hasRole('super-admin');
+
+        // Verificar autorización: solo el dueño de la empresa o super-admin puede eliminar
+        if (! $isSuperAdmin && $user->company_id !== $customer->company_id) {
+            abort(403, 'No tienes permiso para eliminar este cliente.');
+        }
+
+        // Verificar si el cliente tiene documentos asociados
+        if ($customer->documents()->exists()) {
+            return redirect()->route('customers.index')
+                ->with('error', 'No se puede eliminar el cliente porque tiene documentos asociados.');
+        }
+
         $customer->delete();
 
         return redirect()->route('customers.index')

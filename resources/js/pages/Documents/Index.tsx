@@ -1,10 +1,27 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Eye, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { SuccessModal } from '@/components/success-modal';
+import { ErrorModal } from '@/components/error-modal';
 import AppLayout from '@/layouts/app-layout';
 import { index, create } from '@/routes/documents';
 
@@ -51,10 +68,63 @@ export default function DocumentsIndex({ documents, documentTypes, filters, erro
     const [search, setSearch] = useState(filters.search || '');
     const [documentType, setDocumentType] = useState(filters.document_type || '');
     const [status, setStatus] = useState(filters.status || '');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [documentToDelete, setDocumentToDelete] = useState<Document | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    // Manejar mensajes flash
+    useEffect(() => {
+        if (flash?.success) {
+            setSuccessMessage(flash.success);
+            setShowSuccessModal(true);
+        }
+        if (flash?.error) {
+            setErrorMessage(flash.error);
+            setShowErrorModal(true);
+        }
+    }, [flash]);
 
     const handleFilter = (e: React.FormEvent) => {
         e.preventDefault();
         router.get(index().url, { search, document_type: documentType || undefined, status: status || undefined }, { preserveState: true });
+    };
+
+    const handleDeleteClick = (document: Document) => {
+        setDocumentToDelete(document);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!documentToDelete) {
+            return;
+        }
+
+        setIsDeleting(true);
+        router.delete(DocumentController.destroy.url(documentToDelete.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteDialogOpen(false);
+                setDocumentToDelete(null);
+                setIsDeleting(false);
+                setSuccessMessage('Documento eliminado exitosamente.');
+                setShowSuccessModal(true);
+            },
+            onError: (errors) => {
+                setIsDeleting(false);
+                const errorMsg = typeof errors === 'string' ? errors : 'Error al eliminar el documento.';
+                setErrorMessage(errorMsg);
+                setShowErrorModal(true);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            },
+        });
     };
 
     const getStatusBadge = (status: string) => {
@@ -159,13 +229,42 @@ export default function DocumentsIndex({ documents, documentTypes, filters, erro
                                                 {document.status}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Link
-                                                href={DocumentController.show.url(document.id)}
-                                                className="text-primary hover:underline"
-                                            >
-                                                Ver
-                                            </Link>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Link
+                                                                href={DocumentController.show.url(document.id)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="sr-only">Ver documento</span>
+                                                            </Link>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Ver documento</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleDeleteClick(document)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+                                                                type="button"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Eliminar documento</span>
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Eliminar documento</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -173,6 +272,58 @@ export default function DocumentsIndex({ documents, documentTypes, filters, erro
                         </tbody>
                     </table>
                 </div>
+
+                {/* Modal de confirmación de eliminación */}
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>¿Eliminar documento?</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro de que deseas eliminar el documento{' '}
+                                <strong>{documentToDelete?.series}-{documentToDelete?.number}</strong>?
+                                <br />
+                                Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setDocumentToDelete(null);
+                                }}
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirm}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modales de éxito y error */}
+                <SuccessModal
+                    open={showSuccessModal}
+                    onClose={() => {
+                        setShowSuccessModal(false);
+                        setSuccessMessage('');
+                    }}
+                    message={successMessage}
+                />
+                <ErrorModal
+                    open={showErrorModal}
+                    onClose={() => {
+                        setShowErrorModal(false);
+                        setErrorMessage('');
+                    }}
+                    message={errorMessage}
+                />
             </div>
         </AppLayout>
     );

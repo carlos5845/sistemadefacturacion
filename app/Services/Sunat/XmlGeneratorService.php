@@ -4,6 +4,9 @@ namespace App\Services\Sunat;
 
 use App\Models\Document;
 use Illuminate\Support\Facades\Log;
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
+use DOMDocument;
 
 class XmlGeneratorService
 {
@@ -42,6 +45,7 @@ class XmlGeneratorService
         $xml .= ' xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2"';
         $xml .= ' xmlns:qdt="urn:oasis:names:specification:ubl:schema:xsd:QualifiedDatatypes-2"';
         $xml .= ' xmlns:udt="urn:un:unece:uncefact:data:specification:UnqualifiedDataTypesSchemaModule:2"';
+        $xml .= ' xmlns:xades="http://uri.etsi.org/01903/v1.3.2#"';
         $xml .= ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . "\n";
 
         // UBLExtensions (requerido por SUNAT)
@@ -215,6 +219,235 @@ class XmlGeneratorService
     }
 
     /**
+     * Add XAdES-BES elements to signed XML according to SUNAT requirements.
+     * 
+     * XAdES-BES (XML Advanced Electronic Signatures - Basic Electronic Signature)
+     * requires additional elements beyond standard XML-DSIG:
+     * - xades:QualifyingProperties
+     * - xades:SignedProperties
+     * - xades:SignedSignatureProperties
+     * - xades:SignedDataObjectProperties
+     * 
+     * @param  string  $signedXml  XML with basic XML-DSIG signature
+     * @param  string  $certData  X509 certificate data (PEM format)
+     * @return string XML with XAdES-BES signature
+     */
+    protected function addXAdESBES(string $signedXml, string $certData): string
+    {
+        try {
+            // Cargar XML firmado
+            $doc = new DOMDocument();
+            $doc->loadXML($signedXml);
+
+            // Registrar namespace XAdES
+            $xadesNs = 'http://uri.etsi.org/01903/v1.3.2#';
+
+            // Buscar el elemento Signature
+            $xpath = new \DOMXPath($doc);
+            $xpath->registerNamespace('ds', 'http://www.w3.org/2000/09/xmldsig#');
+
+            $signatureNodes = $xpath->query('//ds:Signature');
+            if ($signatureNodes->length === 0) {
+                throw new \Exception('No se encontró el elemento Signature en el XML firmado.');
+            }
+
+            $signatureNode = $signatureNodes->item(0);
+
+            // Obtener ID del Signature si existe, o generar uno
+            $signatureId = $signatureNode->hasAttribute('Id')
+                ? $signatureNode->getAttribute('Id')
+                : 'Signature-' . uniqid();
+
+            if (!$signatureNode->hasAttribute('Id')) {
+                $signatureNode->setAttribute('Id', $signatureId);
+            }
+
+            // Validar y limpiar el certificado antes de procesarlo
+            // Asegurar que el certificado esté en formato PEM válido
+            $certPEM = trim($certData);
+
+            // Si no tiene los headers PEM, intentar leerlo como DER y convertir
+            if (!str_contains($certPEM, '-----BEGIN CERTIFICATE-----')) {
+                // Intentar leer como DER y convertir a PEM
+                $certResource = openssl_x509_read($certData);
+                if ($certResource === false) {
+                    // Si falla, intentar como contenido binario
+                    $certResource = @openssl_x509_read('data://application/x-x509-cert;base64,' . base64_encode($certData));
+                }
+
+                if ($certResource !== false) {
+                    openssl_x509_export($certResource, $certPEM);
+                    $certPEM = trim($certPEM);
+                } else {
+                    throw new \Exception('No se pudo leer el certificado X.509. El formato del certificado no es válido.');
+                }
+            }
+
+            // Verificar que el certificado sea válido antes de parsearlo
+            $certResource = openssl_x509_read($certPEM);
+            if ($certResource === false) {
+                $errorMsg = 'No se pudo leer el certificado X.509. ';
+                while (($error = openssl_error_string()) !== false) {
+                    $errorMsg .= trim($error) . ' ';
+                }
+                throw new \Exception($errorMsg);
+            }
+
+            // Obtener información del certificado
+            $certInfo = openssl_x509_parse($certResource, true);
+            if ($certInfo === false) {
+                $errorMsg = 'No se pudo parsear el certificado X.509. ';
+                while (($error = openssl_error_string()) !== false) {
+                    $errorMsg .= trim($error) . ' ';
+                }
+                throw new \Exception($errorMsg);
+            }
+
+            $certSerialNumber = isset($certInfo['serialNumber']) ? (string) $certInfo['serialNumber'] : '';
+            $certIssuer = isset($certInfo['issuer']) && is_array($certInfo['issuer']) ? $this->formatDN($certInfo['issuer']) : '';
+            $certSubject = isset($certInfo['subject']) && is_array($certInfo['subject']) ? $this->formatDN($certInfo['subject']) : '';
+            $certValidFrom = isset($certInfo['validFrom_time_t']) ? date('Y-m-d\TH:i:s\Z', $certInfo['validFrom_time_t']) : '';
+            $certValidTo = isset($certInfo['validTo_time_t']) ? date('Y-m-d\TH:i:s\Z', $certInfo['validTo_time_t']) : '';
+
+            // Usar el certificado PEM limpio para el hash
+            $certData = $certPEM;
+
+            // Si no se puede obtener el issuer, usar el subject como fallback
+            if (empty($certIssuer) && !empty($certSubject)) {
+                $certIssuer = $certSubject;
+            }
+
+            // Si aún no hay issuer, usar un valor por defecto
+            if (empty($certIssuer)) {
+                $certIssuer = 'CN=Unknown';
+            }
+
+            // Crear elemento Object para XAdES
+            $objectNode = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:Object');
+
+            // Crear QualifyingProperties
+            $qualifyingProps = $doc->createElementNS($xadesNs, 'xades:QualifyingProperties');
+            $qualifyingProps->setAttribute('Target', '#' . $signatureId);
+
+            // Crear SignedProperties
+            $signedProps = $doc->createElementNS($xadesNs, 'xades:SignedProperties');
+            $signedProps->setAttribute('Id', 'SignedProperties-' . uniqid());
+
+            // Crear SignedSignatureProperties
+            $signedSigProps = $doc->createElementNS($xadesNs, 'xades:SignedSignatureProperties');
+
+            // SigningTime
+            $signingTime = $doc->createElementNS($xadesNs, 'xades:SigningTime', date('Y-m-d\TH:i:s\Z'));
+            $signedSigProps->appendChild($signingTime);
+
+            // SigningCertificate
+            $signingCert = $doc->createElementNS($xadesNs, 'xades:SigningCertificate');
+            $cert = $doc->createElementNS($xadesNs, 'xades:Cert');
+
+            // CertDigest
+            $certDigest = $doc->createElementNS($xadesNs, 'xades:CertDigest');
+            $digestMethod = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:DigestMethod');
+            $digestMethod->setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
+            $certDigest->appendChild($digestMethod);
+
+            // Calcular hash del certificado
+            $certHash = base64_encode(hash('sha256', base64_decode(preg_replace('/-----[^-]+-----/', '', $certData)), true));
+            $digestValue = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:DigestValue', $certHash);
+            $certDigest->appendChild($digestValue);
+            $cert->appendChild($certDigest);
+
+            // IssuerSerial
+            $issuerSerial = $doc->createElementNS($xadesNs, 'xades:IssuerSerial');
+            $x509IssuerName = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:X509IssuerName', $certIssuer);
+            $issuerSerial->appendChild($x509IssuerName);
+            $x509SerialNumber = $doc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'ds:X509SerialNumber', $certSerialNumber);
+            $issuerSerial->appendChild($x509SerialNumber);
+            $cert->appendChild($issuerSerial);
+
+            $signingCert->appendChild($cert);
+            $signedSigProps->appendChild($signingCert);
+
+            // SignerRole
+            $signerRole = $doc->createElementNS($xadesNs, 'xades:SignerRole');
+            $claimedRoles = $doc->createElementNS($xadesNs, 'xades:ClaimedRoles');
+            $claimedRole = $doc->createElementNS($xadesNs, 'xades:ClaimedRole', 'supplier');
+            $claimedRoles->appendChild($claimedRole);
+            $signerRole->appendChild($claimedRoles);
+            $signedSigProps->appendChild($signerRole);
+
+            $signedProps->appendChild($signedSigProps);
+
+            // Crear SignedDataObjectProperties
+            $signedDataObjProps = $doc->createElementNS($xadesNs, 'xades:SignedDataObjectProperties');
+
+            // DataObjectFormat - Referencia al objeto firmado (Invoice)
+            // Buscar la referencia en el Signature
+            $referenceNodes = $xpath->query('.//ds:Reference', $signatureNode);
+            $objectReference = null;
+            if ($referenceNodes->length > 0) {
+                $firstReference = $referenceNodes->item(0);
+                $objectReference = $firstReference->hasAttribute('URI')
+                    ? $firstReference->getAttribute('URI')
+                    : '#Invoice';
+            } else {
+                $objectReference = '#Invoice';
+            }
+
+            $dataObjectFormat = $doc->createElementNS($xadesNs, 'xades:DataObjectFormat');
+            $dataObjectFormat->setAttribute('ObjectReference', $objectReference);
+            $mimeType = $doc->createElementNS($xadesNs, 'xades:MimeType', 'text/xml');
+            $dataObjectFormat->appendChild($mimeType);
+            $encoding = $doc->createElementNS($xadesNs, 'xades:Encoding', 'UTF-8');
+            $dataObjectFormat->appendChild($encoding);
+            $signedDataObjProps->appendChild($dataObjectFormat);
+
+            $signedProps->appendChild($signedDataObjProps);
+
+            $qualifyingProps->appendChild($signedProps);
+            $objectNode->appendChild($qualifyingProps);
+
+            // Agregar Object al Signature
+            $signatureNode->appendChild($objectNode);
+
+            // Agregar namespace XAdES al elemento raíz si no existe
+            $rootElement = $doc->documentElement;
+            if (! $rootElement->hasAttribute('xmlns:xades')) {
+                $rootElement->setAttributeNS('http://www.w3.org/2000/xmlns/', 'xmlns:xades', $xadesNs);
+            }
+
+            return $doc->saveXML();
+        } catch (\Exception $e) {
+            Log::error('Error adding XAdES-BES elements', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Si falla agregar XAdES, retornar XML con firma básica
+            // Esto permite que el sistema funcione aunque no tenga XAdES completo
+            Log::warning('Returning XML with basic signature (XAdES-BES addition failed)', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return $signedXml;
+        }
+    }
+
+    /**
+     * Format Distinguished Name (DN) from array to string.
+     * 
+     * @param  array  $dn  Distinguished Name array from openssl_x509_parse
+     * @return string Formatted DN string
+     */
+    protected function formatDN(array $dn): string
+    {
+        $parts = [];
+        foreach ($dn as $key => $value) {
+            $parts[] = $key . '=' . $value;
+        }
+        return implode(', ', $parts);
+    }
+
+    /**
      * Escape XML special characters.
      */
     protected function escapeXml(string $value): string
@@ -270,22 +503,177 @@ class XmlGeneratorService
 
     /**
      * Sign XML with digital certificate.
+     *
+     * @param  string  $xml  XML content to sign
+     * @param  string  $certificate  Certificate content (PEM format) or path to .p12 file
+     * @param  string  $password  Certificate password
+     * @return string Signed XML
      */
     public function sign(string $xml, string $certificate, string $password): string
     {
-        // TODO: Implement XML signing with digital certificate
-        // This typically requires OpenSSL and XMLSecLib
-        // Reference: https://github.com/robrichards/xmlseclibs
-        //
-        // Para implementar la firma digital, necesitarás:
-        // 1. Instalar xmlseclibs: composer require robrichards/xmlseclibs
-        // 2. Cargar el certificado digital (.p12)
-        // 3. Firmar el XML según especificación XMLDSig
-        // 4. Insertar la firma en el XML
+        try {
+            // Cargar el XML en un DOMDocument
+            $doc = new DOMDocument();
+            $doc->loadXML($xml);
 
-        Log::warning('XML signing not yet implemented. Returning unsigned XML.');
+            // Crear objeto de firma
+            $objDSig = new XMLSecurityDSig();
+            $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
 
-        return $xml;
+            // Usar el primer nodo hijo como referencia (Invoice)
+            $rootNode = $doc->documentElement;
+            $objDSig->addReferenceList(
+                [$rootNode],
+                XMLSecurityDSig::SHA256,
+                ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+                ['force_uri' => true]
+            );
+
+            // Cargar la clave privada del certificado
+            // El certificado puede venir como:
+            // 1. Contenido PEM directo (texto)
+            // 2. Ruta a archivo .p12/.pfx en storage
+            // 3. Contenido binario base64 del archivo .p12/.pfx
+            $privateKey = null;
+            $certData = null;
+
+            // Si el certificado parece ser contenido PEM directo
+            if (str_contains($certificate, '-----BEGIN')) {
+                // Intentar extraer la clave privada del PEM
+                $privateKeyResource = openssl_pkey_get_private($certificate, $password);
+                if ($privateKeyResource === false) {
+                    throw new \Exception('No se pudo cargar la clave privada del certificado PEM. Verifique el formato y la contraseña.');
+                }
+                openssl_pkey_export($privateKeyResource, $privateKey);
+                openssl_x509_export(openssl_x509_read($certificate), $certData);
+            } else {
+                // Es un archivo PFX/P12 - puede ser ruta o contenido base64
+                $pkcs12Content = null;
+
+                // Verificar si es una ruta a archivo
+                // Normalizar la ruta para Windows (convertir / a \ si es necesario)
+                $normalizedPath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $certificate);
+
+                if (file_exists($normalizedPath)) {
+                    // Es una ruta absoluta o relativa al storage
+                    $pkcs12Content = file_get_contents($normalizedPath);
+                } elseif (file_exists($certificate)) {
+                    // Intentar con la ruta original
+                    $pkcs12Content = file_get_contents($certificate);
+                } elseif (str_starts_with($certificate, storage_path('app'))) {
+                    // Es una ruta dentro de storage/app
+                    $normalizedStoragePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $certificate);
+                    if (file_exists($normalizedStoragePath)) {
+                        $pkcs12Content = file_get_contents($normalizedStoragePath);
+                    } else {
+                        throw new \Exception("El archivo de certificado no existe en storage: {$certificate}");
+                    }
+                } elseif (file_exists(storage_path('app/' . $certificate))) {
+                    // Es una ruta relativa dentro de storage/app
+                    $relativePath = str_replace(['/', '\\'], DIRECTORY_SEPARATOR, storage_path('app/' . $certificate));
+                    $pkcs12Content = file_get_contents($relativePath);
+                } elseif (base64_decode($certificate, true) !== false && strlen($certificate) > 100) {
+                    // Podría ser contenido base64 del archivo .p12
+                    $decoded = base64_decode($certificate, true);
+                    if ($decoded !== false && str_starts_with($decoded, "\x30\x82")) {
+                        // Parece ser un archivo PKCS#12 válido (empieza con DER encoding)
+                        $pkcs12Content = $decoded;
+                    } else {
+                        throw new \Exception('El certificado no es válido. Debe ser un archivo PFX/P12 o contenido PEM.');
+                    }
+                } else {
+                    // Intentar como contenido binario directo
+                    $pkcs12Content = $certificate;
+                }
+
+                if ($pkcs12Content === null) {
+                    throw new \Exception("No se pudo leer el contenido del certificado PFX/P12.");
+                }
+
+                // Leer el archivo .p12/.pfx
+                $certs = [];
+                $errorMessage = '';
+
+                if (! openssl_pkcs12_read($pkcs12Content, $certs, $password)) {
+                    // Obtener el último error de OpenSSL
+                    while (($error = openssl_error_string()) !== false) {
+                        $errorMessage .= $error . "\n";
+                    }
+                    throw new \Exception('No se pudo leer el certificado PFX/P12. Verifique que la contraseña sea correcta y que el archivo esté en formato válido. Error: ' . trim($errorMessage));
+                }
+
+                if (empty($certs['pkey']) || empty($certs['cert'])) {
+                    throw new \Exception('El certificado PFX/P12 no contiene la clave privada o el certificado X509 necesario.');
+                }
+
+                $privateKey = $certs['pkey'];
+
+                // Asegurar que el certificado esté en formato PEM válido
+                $certData = trim($certs['cert']);
+
+                // Verificar que el certificado tenga los headers PEM
+                if (!str_contains($certData, '-----BEGIN CERTIFICATE-----')) {
+                    // Intentar leer y re-exportar el certificado para asegurar formato PEM válido
+                    $certResource = openssl_x509_read($certData);
+                    if ($certResource === false) {
+                        throw new \Exception('El certificado extraído del archivo PFX/P12 no es un certificado X.509 válido.');
+                    }
+                    openssl_x509_export($certResource, $certData);
+                    $certData = trim($certData);
+                }
+
+                // Validar que el certificado se pueda leer correctamente
+                $testRead = openssl_x509_read($certData);
+                if ($testRead === false) {
+                    $errorMsg = 'El certificado extraído no se puede leer correctamente. ';
+                    while (($error = openssl_error_string()) !== false) {
+                        $errorMsg .= trim($error) . ' ';
+                    }
+                    throw new \Exception($errorMsg);
+                }
+            }
+
+            // Crear clave de seguridad
+            $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, ['type' => 'private']);
+            $objKey->loadKey($privateKey, false, true);
+
+            // Agregar el certificado X509 a la firma
+            $objDSig->add509Cert($certData, true);
+
+            // Insertar la firma en el XML
+            $objDSig->sign($objKey);
+
+            // Agregar la firma al documento
+            $objDSig->appendSignature($rootNode);
+
+            // Obtener el XML firmado básico
+            $signedXml = $doc->saveXML();
+
+            // Verificar que la firma se agregó correctamente
+            if (! str_contains($signedXml, '<ds:Signature') && ! str_contains($signedXml, '<Signature')) {
+                throw new \Exception('La firma digital no se agregó correctamente al XML. El XML firmado no contiene el elemento Signature.');
+            }
+
+            // Agregar elementos XAdES-BES según requisitos de SUNAT
+            $signedXml = $this->addXAdESBES($signedXml, $certData);
+
+            Log::info('XML signed successfully with XAdES-BES', [
+                'xml_length' => strlen($signedXml),
+                'has_signature' => true,
+                'has_xades' => str_contains($signedXml, 'xades:QualifyingProperties'),
+            ]);
+
+            return $signedXml;
+        } catch (\Exception $e) {
+            Log::error('Error signing XML with digital certificate', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            // Lanzar la excepción en lugar de retornar XML sin firmar
+            // Esto permite que el código que llama maneje el error apropiadamente
+            throw new \Exception('Error al firmar el XML: ' . $e->getMessage(), 0, $e);
+        }
     }
 
     /**

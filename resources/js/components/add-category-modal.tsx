@@ -46,24 +46,57 @@ export function AddCategoryModal({
                     ?.getAttribute('value') ||
                 '';
 
+            if (!csrfToken) {
+                setErrors({
+                    name: 'No se pudo obtener el token CSRF. Por favor, recarga la página.',
+                });
+                setProcessing(false);
+                return;
+            }
+
             const response = await fetch('/product-categories', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken,
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
                 },
                 body: JSON.stringify({ name, description }),
+                credentials: 'same-origin',
             });
 
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                // Si la respuesta no es JSON válido
+                const text = await response.text();
+                setErrors({
+                    name: `Error del servidor: ${response.status} ${response.statusText}. ${text.substring(0, 100)}`,
+                });
+                setProcessing(false);
+                return;
+            }
 
             if (!response.ok) {
                 if (data.errors) {
-                    setErrors(data.errors);
+                    // Manejar errores de validación
+                    const validationErrors: { name?: string; description?: string } = {};
+                    if (data.errors.name) {
+                        validationErrors.name = Array.isArray(data.errors.name) 
+                            ? data.errors.name[0] 
+                            : data.errors.name;
+                    }
+                    if (data.errors.description) {
+                        validationErrors.description = Array.isArray(data.errors.description)
+                            ? data.errors.description[0]
+                            : data.errors.description;
+                    }
+                    setErrors(validationErrors);
                 } else {
                     setErrors({
-                        name: data.error || 'Error al crear la categoría',
+                        name: data.message || data.error || `Error al crear la categoría (${response.status})`,
                     });
                 }
                 setProcessing(false);
@@ -71,13 +104,24 @@ export function AddCategoryModal({
             }
 
             // Categoría creada exitosamente
-            onCategoryCreated(data.category);
-            setName('');
-            setDescription('');
-            setErrors({});
-            onClose();
+            if (data.category) {
+                onCategoryCreated(data.category);
+                setName('');
+                setDescription('');
+                setErrors({});
+                onClose();
+            } else {
+                setErrors({
+                    name: 'La categoría se creó pero no se recibió la información completa.',
+                });
+            }
         } catch (error) {
-            setErrors({ name: 'Error al crear la categoría' });
+            console.error('Error creating category:', error);
+            setErrors({
+                name: error instanceof Error 
+                    ? `Error de conexión: ${error.message}` 
+                    : 'Error al crear la categoría. Verifique su conexión.',
+            });
         } finally {
             setProcessing(false);
         }

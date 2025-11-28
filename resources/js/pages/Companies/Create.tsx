@@ -130,6 +130,50 @@ export default function CompaniesCreate() {
                                     />
                                     <InputError message={errors.password_sol} />
                                 </div>
+
+                                <div className="grid gap-2 md:col-span-2">
+                                    <Label htmlFor="certificate_file">
+                                        Certificado Digital PFX/P12 (Requerido por SUNAT) - Opcional
+                                    </Label>
+                                    <input
+                                        id="certificate_file"
+                                        name="certificate_file"
+                                        type="file"
+                                        accept=".p12,.pfx"
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1 file:text-sm file:font-medium file:text-primary-foreground file:transition-colors hover:file:bg-primary/90 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 outline-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                        aria-invalid={
+                                            errors.certificate_file
+                                                ? 'true'
+                                                : undefined
+                                        }
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        <strong>Requerido por SUNAT:</strong> Suba el archivo de certificado digital en formato PFX/P12 (.p12 o .pfx).
+                                        <br />
+                                        <strong>Nota:</strong> El certificado debe ser emitido por una entidad certificadora autorizada por SUNAT.
+                                        <br />
+                                        <strong>Para desarrollo:</strong> Puede dejarlo vacío. El sistema funcionará en modo simulación y generará XML sin firmar.
+                                    </p>
+                                    <InputError message={errors.certificate_file} />
+                                </div>
+
+                                <div className="grid gap-2 md:col-span-2">
+                                    <Label htmlFor="certificate_password">
+                                        Contraseña del Certificado (requerida si sube un archivo PFX/P12)
+                                    </Label>
+                                    <Input
+                                        id="certificate_password"
+                                        name="certificate_password"
+                                        type="password"
+                                        placeholder="Contraseña del certificado"
+                                        aria-invalid={
+                                            errors.certificate_password
+                                                ? 'true'
+                                                : undefined
+                                        }
+                                    />
+                                    <InputError message={errors.certificate_password} />
+                                </div>
                             </div>
 
                             <div className="flex items-center gap-4">

@@ -76,6 +76,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         name="identity_type"
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
                                         required
+                                        defaultValue={customer.identity_type}
                                         aria-invalid={errors.identity_type ? 'true' : undefined}
                                     >
                                         <option value="DNI">DNI</option>
@@ -94,6 +95,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         type="text"
                                         maxLength={15}
                                         required
+                                        defaultValue={customer.identity_number}
                                         aria-invalid={errors.identity_number ? 'true' : undefined}
                                     />
                                     <InputError message={errors.identity_number} />
@@ -106,6 +108,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         name="name"
                                         type="text"
                                         required
+                                        defaultValue={customer.name}
                                         aria-invalid={errors.name ? 'true' : undefined}
                                     />
                                     <InputError message={errors.name} />
@@ -117,6 +120,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         id="address"
                                         name="address"
                                         type="text"
+                                        defaultValue={customer.address || ''}
                                         aria-invalid={errors.address ? 'true' : undefined}
                                     />
                                     <InputError message={errors.address} />
@@ -128,6 +132,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         id="email"
                                         name="email"
                                         type="email"
+                                        defaultValue={customer.email || ''}
                                         aria-invalid={errors.email ? 'true' : undefined}
                                     />
                                     <InputError message={errors.email} />
@@ -140,6 +145,7 @@ export default function CustomersEdit({ customer }: Props) {
                                         name="phone"
                                         type="tel"
                                         maxLength={20}
+                                        defaultValue={customer.phone || ''}
                                         aria-invalid={errors.phone ? 'true' : undefined}
                                     />
                                     <InputError message={errors.phone} />

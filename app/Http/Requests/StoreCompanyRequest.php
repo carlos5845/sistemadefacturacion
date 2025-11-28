@@ -28,7 +28,21 @@ class StoreCompanyRequest extends FormRequest
             'ruc' => ['required', 'string', 'size:11', 'regex:/^[0-9]{11}$/', Rule::unique(Company::class)],
             'business_name' => ['required', 'string', 'max:255'],
             'trade_name' => ['nullable', 'string', 'max:255'],
-            'certificate' => ['nullable', 'string'],
+            'certificate' => ['nullable'],
+            'certificate_file' => [
+                'nullable',
+                'file',
+                function ($attribute, $value, $fail) {
+                    if ($value && $value->isValid()) {
+                        $extension = strtolower($value->getClientOriginalExtension());
+                        $allowedExtensions = ['p12', 'pfx'];
+                        if (!in_array($extension, $allowedExtensions)) {
+                            $fail('El archivo de certificado debe tener extensión .p12 o .pfx.');
+                        }
+                    }
+                },
+                'max:2048', // Máximo 2MB
+            ],
             'certificate_password' => ['nullable', 'string', 'max:255'],
             'user_sol' => ['nullable', 'string', 'max:50'],
             'password_sol' => ['nullable', 'string', 'max:50'],
@@ -52,6 +66,7 @@ class StoreCompanyRequest extends FormRequest
             'business_name.required' => 'La razón social es obligatoria.',
             'ubigeo.size' => 'El ubigeo debe tener 6 dígitos.',
             'ubigeo.regex' => 'El ubigeo debe contener solo números.',
+            'certificate_file.max' => 'El archivo de certificado no debe ser mayor a 2MB.',
         ];
     }
 }

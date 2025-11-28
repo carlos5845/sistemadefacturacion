@@ -2,11 +2,18 @@ import DocumentController from '@/actions/App/Http/Controllers/DocumentControlle
 import { sendToSunat } from '@/routes/documents';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { ArrowLeft, Pencil, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ErrorModal } from '@/components/error-modal';
 import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/documents';
 
@@ -40,6 +47,9 @@ interface Document {
         sunat_code: string;
         sunat_message: string;
     };
+    has_xml?: boolean;
+    has_xml_signed?: boolean;
+    hash?: string | null;
 }
 
 interface Props {
@@ -177,25 +187,50 @@ export default function DocumentsShow({ document }: Props) {
                     <div className="flex gap-2">
                         {document.status === 'PENDING' && (
                             <>
-                                <Button
-                                    onClick={handleSendToSunat}
-                                    disabled={isSending}
-                                >
-                                    {isSending
-                                        ? 'Enviando...'
-                                        : 'Enviar a SUNAT'}
-                                </Button>
-                                <Link
-                                    href={DocumentController.edit.url(
-                                        document.id,
-                                    )}
-                                >
-                                    <Button variant="outline">Editar</Button>
-                                </Link>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                onClick={handleSendToSunat}
+                                                disabled={isSending}
+                                            >
+                                                <Send className="mr-2 h-4 w-4" />
+                                                {isSending
+                                                    ? 'Enviando...'
+                                                    : 'Enviar a SUNAT'}
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Enviar documento a SUNAT</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link
+                                                href={DocumentController.edit.url(
+                                                    document.id,
+                                                )}
+                                            >
+                                                <Button variant="outline">
+                                                    <Pencil className="mr-2 h-4 w-4" />
+                                                    Editar
+                                                </Button>
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Editar documento</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </>
                         )}
                         <Link href={index().url}>
-                            <Button variant="outline">Volver</Button>
+                            <Button variant="outline">
+                                <ArrowLeft className="mr-2 h-4 w-4" />
+                                Volver
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -394,6 +429,83 @@ export default function DocumentsShow({ document }: Props) {
                         </table>
                     </div>
                 </div>
+
+                {/* Sección de XML */}
+                {(document.has_xml || document.has_xml_signed) && (
+                    <div className="rounded-lg border p-6">
+                        <h2 className="mb-4 text-lg font-semibold">
+                            Archivos XML UBL 2.1
+                        </h2>
+                        <div className="flex flex-wrap gap-4">
+                            {document.has_xml && (
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        XML Original
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <a
+                                            href={DocumentController.downloadXml.url(
+                                                document.id,
+                                            )}
+                                            download
+                                            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            Descargar XML
+                                        </a>
+                                        <a
+                                            href={DocumentController.viewXml.url(
+                                                document.id,
+                                            )}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            Ver XML
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                            {document.has_xml_signed && (
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        XML Firmado
+                                    </span>
+                                    <div className="flex gap-2">
+                                        <a
+                                            href={DocumentController.downloadXmlSigned.url(
+                                                document.id,
+                                            )}
+                                            download
+                                            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            Descargar XML Firmado
+                                        </a>
+                                        <a
+                                            href={DocumentController.viewXmlSigned.url(
+                                                document.id,
+                                            )}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50"
+                                        >
+                                            Ver XML Firmado
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
+                            {document.hash && (
+                                <div className="flex flex-col gap-2">
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        Hash SHA-256
+                                    </span>
+                                    <code className="rounded-md bg-muted px-2 py-1 font-mono text-xs">
+                                        {document.hash}
+                                    </code>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

@@ -1,10 +1,27 @@
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Eye, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
+import { SuccessModal } from '@/components/success-modal';
+import { ErrorModal } from '@/components/error-modal';
 import AppLayout from '@/layouts/app-layout';
 import { index, create } from '@/routes/products';
 
@@ -46,6 +63,27 @@ export default function ProductsIndex({ products, categories, filters, error }: 
     const [search, setSearch] = useState(filters.search || '');
     const [categoryId, setCategoryId] = useState(filters.category_id?.toString() || '');
     const [active, setActive] = useState(filters.active?.toString() || '');
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
+
+    // Manejar mensajes flash
+    useEffect(() => {
+        if (flash?.success) {
+            setSuccessMessage(flash.success);
+            setShowSuccessModal(true);
+        }
+        if (flash?.error) {
+            setErrorMessage(flash.error);
+            setShowErrorModal(true);
+        }
+    }, [flash]);
 
     const handleFilter = (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +92,38 @@ export default function ProductsIndex({ products, categories, filters, error }: 
             category_id: categoryId || undefined,
             active: active !== '' ? active === 'true' : undefined,
         }, { preserveState: true });
+    };
+
+    const handleDeleteClick = (product: Product) => {
+        setProductToDelete(product);
+        setDeleteDialogOpen(true);
+    };
+
+    const handleDeleteConfirm = () => {
+        if (!productToDelete) {
+            return;
+        }
+
+        setIsDeleting(true);
+        router.delete(ProductController.destroy.url(productToDelete.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeleteDialogOpen(false);
+                setProductToDelete(null);
+                setIsDeleting(false);
+                setSuccessMessage('Producto eliminado exitosamente.');
+                setShowSuccessModal(true);
+            },
+            onError: (errors) => {
+                setIsDeleting(false);
+                const errorMsg = typeof errors === 'string' ? errors : 'Error al eliminar el producto.';
+                setErrorMessage(errorMsg);
+                setShowErrorModal(true);
+            },
+            onFinish: () => {
+                setIsDeleting(false);
+            },
+        });
     };
 
     return (
@@ -150,13 +220,42 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                                                 {product.active ? 'Activo' : 'Inactivo'}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Link
-                                                href={ProductController.show.url(product.id)}
-                                                className="text-primary hover:underline"
-                                            >
-                                                Ver
-                                            </Link>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Link
+                                                                href={ProductController.show.url(product.id)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="sr-only">Ver producto</span>
+                                                            </Link>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Ver producto</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <button
+                                                                onClick={() => handleDeleteClick(product)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+                                                                type="button"
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Eliminar producto</span>
+                                                            </button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Eliminar producto</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -164,6 +263,58 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                         </tbody>
                     </table>
                 </div>
+
+                {/* Modal de confirmación de eliminación */}
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>¿Eliminar producto?</DialogTitle>
+                            <DialogDescription>
+                                ¿Estás seguro de que deseas eliminar el producto{' '}
+                                <strong>{productToDelete?.name}</strong>?
+                                <br />
+                                Esta acción no se puede deshacer.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter>
+                            <Button
+                                variant="outline"
+                                onClick={() => {
+                                    setDeleteDialogOpen(false);
+                                    setProductToDelete(null);
+                                }}
+                                disabled={isDeleting}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={handleDeleteConfirm}
+                                disabled={isDeleting}
+                            >
+                                {isDeleting ? 'Eliminando...' : 'Eliminar'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Modales de éxito y error */}
+                <SuccessModal
+                    open={showSuccessModal}
+                    onClose={() => {
+                        setShowSuccessModal(false);
+                        setSuccessMessage('');
+                    }}
+                    message={successMessage}
+                />
+                <ErrorModal
+                    open={showErrorModal}
+                    onClose={() => {
+                        setShowErrorModal(false);
+                        setErrorMessage('');
+                    }}
+                    message={errorMessage}
+                />
             </div>
         </AppLayout>
     );

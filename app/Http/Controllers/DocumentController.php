@@ -223,8 +223,117 @@ class DocumentController extends Controller
             ];
         }
 
+        // Incluir información sobre XML (sin enviar el contenido completo por defecto)
+        $documentData['has_xml'] = ! empty($document->xml);
+        $documentData['has_xml_signed'] = ! empty($document->xml_signed);
+        $documentData['hash'] = $document->hash;
+
         return Inertia::render('Documents/Show', [
             'document' => $documentData,
+        ]);
+    }
+
+    /**
+     * Download XML file (original).
+     */
+    public function downloadXml(Document $document)
+    {
+        $user = request()->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para descargar este XML.');
+        }
+
+        if (empty($document->xml)) {
+            abort(404, 'El documento no tiene XML generado.');
+        }
+
+        $fileName = $document->series . '-' . $document->number . '.xml';
+
+        return response($document->xml, 200, [
+            'Content-Type' => 'application/xml; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
+     * Download signed XML file.
+     */
+    public function downloadXmlSigned(Document $document)
+    {
+        $user = request()->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para descargar este XML firmado.');
+        }
+
+        if (empty($document->xml_signed)) {
+            abort(404, 'El documento no tiene XML firmado.');
+        }
+
+        $fileName = $document->series . '-' . $document->number . '-signed.xml';
+
+        return response($document->xml_signed, 200, [
+            'Content-Type' => 'application/xml; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
+
+    /**
+     * View XML content (original).
+     */
+    public function viewXml(Document $document): Response
+    {
+        $user = request()->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para ver este XML.');
+        }
+
+        if (empty($document->xml)) {
+            abort(404, 'El documento no tiene XML generado.');
+        }
+
+        return Inertia::render('Documents/XmlViewer', [
+            'document' => [
+                'id' => $document->id,
+                'series' => $document->series,
+                'number' => $document->number,
+                'document_type' => $document->document_type,
+            ],
+            'xml' => $document->xml,
+            'type' => 'original',
+        ]);
+    }
+
+    /**
+     * View signed XML content.
+     */
+    public function viewXmlSigned(Document $document): Response
+    {
+        $user = request()->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para ver este XML firmado.');
+        }
+
+        if (empty($document->xml_signed)) {
+            abort(404, 'El documento no tiene XML firmado.');
+        }
+
+        return Inertia::render('Documents/XmlViewer', [
+            'document' => [
+                'id' => $document->id,
+                'series' => $document->series,
+                'number' => $document->number,
+                'document_type' => $document->document_type,
+            ],
+            'xml' => $document->xml_signed,
+            'type' => 'signed',
         ]);
     }
 

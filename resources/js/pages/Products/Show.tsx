@@ -1,8 +1,15 @@
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import { Pencil, ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/products';
 
@@ -65,11 +72,26 @@ export default function ProductsShow({ product }: Props) {
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={ProductController.edit.url(product.id)}>
-                            <Button>Editar</Button>
-                        </Link>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Link href={ProductController.edit.url(product.id)}>
+                                        <Button>
+                                            <Pencil className="h-4 w-4 mr-2" />
+                                            Editar
+                                        </Button>
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Editar producto</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                         <Link href={index().url}>
-                            <Button variant="outline">Volver</Button>
+                            <Button variant="outline">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Volver
+                            </Button>
                         </Link>
                     </div>
                 </div>

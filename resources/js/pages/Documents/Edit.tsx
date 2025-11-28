@@ -253,7 +253,9 @@ export default function DocumentsEdit({
                                         name="customer_id"
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                         defaultValue={
-                                            document.customer_id || ''
+                                            document.customer_id
+                                                ? String(document.customer_id)
+                                                : ''
                                         }
                                     >
                                         <option value="">Sin cliente</option>
@@ -277,7 +279,13 @@ export default function DocumentsEdit({
                                         name="issue_date"
                                         type="date"
                                         required
-                                        defaultValue={document.issue_date}
+                                        defaultValue={
+                                            document.issue_date
+                                                ? new Date(document.issue_date)
+                                                      .toISOString()
+                                                      .split('T')[0]
+                                                : ''
+                                        }
                                         aria-invalid={
                                             errors.issue_date
                                                 ? 'true'
@@ -520,5 +528,3 @@ export default function DocumentsEdit({
         </AppLayout>
     );
 }
-
-

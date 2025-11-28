@@ -1,8 +1,15 @@
 import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
+import { Pencil, ArrowLeft } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/customers';
 
@@ -35,6 +42,7 @@ const breadcrumbs = (customer: Customer): BreadcrumbItem[] => [
 ];
 
 export default function CustomersShow({ customer }: Props) {
+
     return (
         <AppLayout breadcrumbs={breadcrumbs(customer)}>
             <Head title={customer.name} />
@@ -48,11 +56,26 @@ export default function CustomersShow({ customer }: Props) {
                         </p>
                     </div>
                     <div className="flex gap-2">
-                        <Link href={CustomerController.edit.url(customer.id)}>
-                            <Button>Editar</Button>
-                        </Link>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Link href={CustomerController.edit.url(customer.id)}>
+                                        <Button>
+                                            <Pencil className="h-4 w-4 mr-2" />
+                                            Editar
+                                        </Button>
+                                    </Link>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Editar cliente</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                         <Link href={index().url}>
-                            <Button variant="outline">Volver</Button>
+                            <Button variant="outline">
+                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                Volver
+                            </Button>
                         </Link>
                     </div>
                 </div>
@@ -122,6 +145,7 @@ export default function CustomersShow({ customer }: Props) {
                         </div>
                     </dl>
                 </div>
+
             </div>
         </AppLayout>
     );

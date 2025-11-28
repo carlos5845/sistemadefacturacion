@@ -2,8 +2,15 @@ import CompanyController from '@/actions/App/Http/Controllers/CompanyController'
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
+import { Eye } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { index, create } from '@/routes/companies';
@@ -96,13 +103,25 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                                         <td className="px-4 py-3">{company.business_name}</td>
                                         <td className="px-4 py-3">{company.trade_name || '-'}</td>
                                         <td className="px-4 py-3">{company.address || '-'}</td>
-                                        <td className="px-4 py-3 text-right">
-                                            <Link
-                                                href={CompanyController.show.url(company.id)}
-                                                className="text-primary hover:underline"
-                                            >
-                                                Ver
-                                            </Link>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end">
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Link
+                                                                href={CompanyController.show.url(company.id)}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                                <span className="sr-only">Ver empresa</span>
+                                                            </Link>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Ver empresa</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))

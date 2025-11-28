@@ -21,6 +21,7 @@ class ProductCategoryController extends Controller
         if (! $companyId) {
             return response()->json([
                 'error' => 'Debe estar asociado a una empresa para crear categorías.',
+                'message' => 'Debe estar asociado a una empresa para crear categorías.',
             ], 422);
         }
 
@@ -39,6 +40,7 @@ class ProductCategoryController extends Controller
         if ($validator->fails()) {
             return response()->json([
                 'errors' => $validator->errors(),
+                'message' => 'Error de validación. Por favor, revise los campos.',
             ], 422);
         }
 
@@ -57,11 +59,16 @@ class ProductCategoryController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
-            // Log the error for debugging purposes
-            // Log::error('Error creating product category: ' . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error('Error creating product category', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => $user->id,
+                'company_id' => $companyId,
+            ]);
 
             return response()->json([
-                'error' => 'Ocurrió un error inesperado en la base de datos. Verifique que su usuario esté asociado a una empresa válida.',
+                'error' => 'Ocurrió un error inesperado al crear la categoría: ' . $e->getMessage(),
+                'message' => 'Error al crear la categoría. Por favor, intente nuevamente.',
             ], 500);
         }
     }
