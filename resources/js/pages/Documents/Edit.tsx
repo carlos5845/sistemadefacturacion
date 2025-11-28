@@ -1,6 +1,6 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
 import { type BreadcrumbItem } from '@/types';
-import { Form, Head, Link, usePage } from '@inertiajs/react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { useEffect, useState } from 'react';
 
 import { ErrorModal } from '@/components/error-modal';
@@ -12,24 +12,8 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/documents';
 
-interface Props {
-    customers?: Array<{ id: number; name: string }>;
-    documentTypes?: Array<{ code: string; name: string }>;
-    error?: string;
-}
-
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Documentos',
-        href: index().url,
-    },
-    {
-        title: 'Nuevo Documento',
-        href: DocumentController.create.url(),
-    },
-];
-
 interface DocumentItem {
+    id?: number;
     product_id: number | null;
     description: string;
     quantity: number;
@@ -39,7 +23,41 @@ interface DocumentItem {
     igv: number;
 }
 
-export default function DocumentsCreate({
+interface Document {
+    id: number;
+    document_type: string;
+    series: string;
+    number: number;
+    issue_date: string;
+    currency: string;
+    customer_id: number | null;
+    items: DocumentItem[];
+}
+
+interface Props {
+    document: Document;
+    customers?: Array<{ id: number; name: string }>;
+    documentTypes?: Array<{ code: string; name: string }>;
+    error?: string;
+}
+
+const breadcrumbs = (document: Document): BreadcrumbItem[] => [
+    {
+        title: 'Documentos',
+        href: index().url,
+    },
+    {
+        title: `${document.series}-${document.number}`,
+        href: DocumentController.show.url(document.id),
+    },
+    {
+        title: 'Editar',
+        href: DocumentController.edit.url(document.id),
+    },
+];
+
+export default function DocumentsEdit({
+    document,
     customers = [],
     documentTypes = [],
     error: propError,
@@ -52,17 +70,31 @@ export default function DocumentsCreate({
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
 
-    const [items, setItems] = useState<DocumentItem[]>([
-        {
-            product_id: null,
-            description: '',
-            quantity: 1,
-            unit_price: 0,
-            total: 0,
-            tax_type: '10',
-            igv: 0,
-        },
-    ]);
+    // Inicializar items desde el documento
+    const [items, setItems] = useState<DocumentItem[]>(
+        document.items && document.items.length > 0
+            ? document.items.map((item) => ({
+                  id: item.id,
+                  product_id: item.product_id,
+                  description: item.description,
+                  quantity: parseFloat(String(item.quantity)) || 0,
+                  unit_price: parseFloat(String(item.unit_price)) || 0,
+                  total: parseFloat(String(item.total)) || 0,
+                  tax_type: item.tax_type || '10',
+                  igv: parseFloat(String(item.igv)) || 0,
+              }))
+            : [
+                  {
+                      product_id: null,
+                      description: '',
+                      quantity: 1,
+                      unit_price: 0,
+                      total: 0,
+                      tax_type: '10',
+                      igv: 0,
+                  },
+              ],
+    );
 
     useEffect(() => {
         if (flash?.success) {
@@ -78,11 +110,7 @@ export default function DocumentsCreate({
 
     const handleSuccessClose = () => {
         setShowSuccessModal(false);
-        // Redirigir a la vista del documento después de crear
-        if (flash?.success?.includes('creado')) {
-            // El documento redirige automáticamente a su página de detalle
-            // No necesitamos hacer nada aquí
-        }
+        router.visit(DocumentController.show.url(document.id));
     };
 
     const handleErrorClose = () => {
@@ -154,28 +182,29 @@ export default function DocumentsCreate({
     const totals = calculateTotals();
 
     return (
-        <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Nuevo Documento" />
+        <AppLayout breadcrumbs={breadcrumbs(document)}>
+            <Head title={`Editar: ${document.series}-${document.number}`} />
 
             <SuccessModal
                 open={showSuccessModal}
                 onClose={handleSuccessClose}
-                title="Documento Creado"
+                title="Documento Actualizado"
                 message={successMessage}
             />
 
             <ErrorModal
                 open={showErrorModal}
                 onClose={handleErrorClose}
-                title="Error al Crear Documento"
+                title="Error al Actualizar Documento"
                 message={errorMessage}
             />
 
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-2xl font-semibold">Nuevo Documento</h1>
+                    <h1 className="text-2xl font-semibold">Editar Documento</h1>
                     <p className="text-muted-foreground">
-                        Crea un nuevo documento electrónico
+                        Actualiza la información del documento {document.series}
+                        -{document.number}
                     </p>
                 </div>
 
@@ -186,10 +215,15 @@ export default function DocumentsCreate({
                 )}
 
                 <Form
-                    {...DocumentController.store.form()}
+                    {...DocumentController.update.form(document.id)}
                     className="space-y-6"
                     options={{
                         preserveScroll: true,
+                    }}
+                    defaults={{
+                        customer_id: document.customer_id || '',
+                        issue_date: document.issue_date,
+                        currency: document.currency,
                     }}
                 >
                     {({ processing, errors }) => (
@@ -213,43 +247,14 @@ export default function DocumentsCreate({
 
                             <div className="grid gap-6 md:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="document_type">
-                                        Tipo de Documento *
-                                    </Label>
-                                    <select
-                                        id="document_type"
-                                        name="document_type"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
-                                        required
-                                        aria-invalid={
-                                            errors.document_type
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                    >
-                                        <option value="">
-                                            Seleccione un tipo
-                                        </option>
-                                        {documentTypes.map((type) => (
-                                            <option
-                                                key={type.code}
-                                                value={type.code}
-                                            >
-                                                {type.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <InputError
-                                        message={errors.document_type}
-                                    />
-                                </div>
-
-                                <div className="grid gap-2">
                                     <Label htmlFor="customer_id">Cliente</Label>
                                     <select
                                         id="customer_id"
                                         name="customer_id"
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        defaultValue={
+                                            document.customer_id || ''
+                                        }
                                     >
                                         <option value="">Sin cliente</option>
                                         {customers.map((customer) => (
@@ -264,37 +269,6 @@ export default function DocumentsCreate({
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="series">Serie *</Label>
-                                    <Input
-                                        id="series"
-                                        name="series"
-                                        type="text"
-                                        maxLength={4}
-                                        placeholder="F001"
-                                        required
-                                        aria-invalid={
-                                            errors.series ? 'true' : undefined
-                                        }
-                                    />
-                                    <InputError message={errors.series} />
-                                </div>
-
-                                <div className="grid gap-2">
-                                    <Label htmlFor="number">Número *</Label>
-                                    <Input
-                                        id="number"
-                                        name="number"
-                                        type="number"
-                                        min="1"
-                                        required
-                                        aria-invalid={
-                                            errors.number ? 'true' : undefined
-                                        }
-                                    />
-                                    <InputError message={errors.number} />
-                                </div>
-
-                                <div className="grid gap-2">
                                     <Label htmlFor="issue_date">
                                         Fecha de Emisión *
                                     </Label>
@@ -303,11 +277,7 @@ export default function DocumentsCreate({
                                         name="issue_date"
                                         type="date"
                                         required
-                                        defaultValue={
-                                            new Date()
-                                                .toISOString()
-                                                .split('T')[0]
-                                        }
+                                        defaultValue={document.issue_date}
                                         aria-invalid={
                                             errors.issue_date
                                                 ? 'true'
@@ -324,7 +294,7 @@ export default function DocumentsCreate({
                                         name="currency"
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
                                         required
-                                        defaultValue="PEN"
+                                        defaultValue={document.currency}
                                     >
                                         <option value="PEN">Soles (PEN)</option>
                                         <option value="USD">
@@ -531,9 +501,13 @@ export default function DocumentsCreate({
                                 <Button type="submit" disabled={processing}>
                                     {processing
                                         ? 'Guardando...'
-                                        : 'Guardar Documento'}
+                                        : 'Guardar Cambios'}
                                 </Button>
-                                <Link href={index().url}>
+                                <Link
+                                    href={DocumentController.show.url(
+                                        document.id,
+                                    )}
+                                >
                                     <Button type="button" variant="outline">
                                         Cancelar
                                     </Button>
@@ -546,3 +520,5 @@ export default function DocumentsCreate({
         </AppLayout>
     );
 }
+
+

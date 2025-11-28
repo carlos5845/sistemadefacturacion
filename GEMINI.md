@@ -75,3 +75,15 @@ The main application layout is defined in `resources/js/layouts/app/app-sidebar-
 *   `AppSidebarHeader`: The header for the sidebar layout.
 
 The dashboard page, located at `resources/js/pages/dashboard.tsx`, uses this layout and displays a simple placeholder pattern.
+
+## Recent Fixes and Enhancements
+
+### Category Creation Module
+
+1.  **Improved Error Handling in Backend:**
+    *   **Description:** Modified `app/Http/Controllers/ProductCategoryController.php` to include a `try...catch` block around the `ProductCategory::create()` method. This ensures that unexpected database errors (e.g., foreign key constraint violations due to invalid `company_id`) are caught gracefully.
+    *   **Benefit:** Prevents server crashes and provides a more informative error message to the frontend, guiding the user to check their company's data integrity.
+
+2.  **CSRF Token Fix for Frontend Modal:**
+    *   **Description:** Added the CSRF token meta tag (`<meta name="csrf-token" content="{{ csrf_token() }}">`) to the `<head>` section of `resources/views/app.blade.php`.
+    *   **Benefit:** Resolves the `419 (unknown status)` error that occurred when submitting the category creation form via a manual `fetch` request from `resources/js/components/add-category-modal.tsx`. This ensures that Laravel's CSRF protection middleware is satisfied.

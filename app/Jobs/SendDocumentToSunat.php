@@ -19,8 +19,7 @@ class SendDocumentToSunat implements ShouldQueue
      */
     public function __construct(
         public Document $document
-    ) {
-    }
+    ) {}
 
     /**
      * Execute the job.
@@ -32,20 +31,38 @@ class SendDocumentToSunat implements ShouldQueue
             $this->document->update(['status' => 'SENT']);
 
             // Send to SUNAT
-            $sunatService->send($this->document);
+            $sunatResponse = $sunatService->send($this->document);
+
+            // Si la respuesta tiene código ERROR, actualizar el estado a REJECTED
+            if ($sunatResponse->sunat_code === 'ERROR') {
+                $this->document->update(['status' => 'REJECTED']);
+            } elseif ($sunatResponse->sunat_code === 'PENDING') {
+                // Si está pendiente (sin XML firmado), mantener en SENT
+                $this->document->update(['status' => 'SENT']);
+            }
 
             Log::info('Document sent to SUNAT successfully', [
                 'document_id' => $this->document->id,
+                'sunat_code' => $sunatResponse->sunat_code,
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to send document to SUNAT', [
                 'document_id' => $this->document->id,
                 'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             // Update document status back to PENDING on failure
             $this->document->update(['status' => 'PENDING']);
+
+            // Crear respuesta de error
+            \App\Models\SunatResponse::updateOrCreate(
+                ['document_id' => $this->document->id],
+                [
+                    'sunat_code' => 'ERROR',
+                    'sunat_message' => 'Error al enviar: ' . $e->getMessage(),
+                ]
+            );
 
             throw $e;
         }

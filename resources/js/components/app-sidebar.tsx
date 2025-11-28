@@ -11,13 +11,21 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
-import { index as customersIndex } from '@/routes/customers';
-import { index as productsIndex } from '@/routes/products';
-import { index as documentsIndex } from '@/routes/documents';
 import { index as companiesIndex } from '@/routes/companies';
+import { index as customersIndex } from '@/routes/customers';
+import { index as documentsIndex } from '@/routes/documents';
+import { index as productsIndex } from '@/routes/products';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid, Users, Package, FileText, Building2 } from 'lucide-react';
+import {
+    BookOpen,
+    Building2,
+    FileText,
+    Folder,
+    LayoutGrid,
+    Package,
+    Users,
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [

@@ -38,8 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware('can:viewAny,App\Models\Document');
 
     Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
-        ->name('documents.send-to-sunat')
-        ->middleware('can:sendToSunat,App\Models\Document');
+        ->name('documents.send-to-sunat');
 });
 
 require __DIR__ . '/settings.php';

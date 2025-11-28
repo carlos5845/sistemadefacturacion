@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreDocumentRequest;
+use App\Http\Requests\UpdateDocumentRequest;
 use App\Jobs\SendDocumentToSunat;
 use App\Models\CatalogDocumentType;
 use App\Models\Customer;
@@ -149,7 +150,7 @@ class DocumentController extends Controller
     {
         $user = $request->user();
         $data = $request->validated();
-        
+
         // Si no viene company_id en el request, usar el del usuario
         if (! isset($data['company_id'])) {
             $data['company_id'] = $user->company_id;
@@ -197,7 +198,7 @@ class DocumentController extends Controller
     public function show(Request $request, Document $document): Response
     {
         $user = $request->user();
-        
+
         // Verificar autorización
         if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
             abort(403, 'No tienes permiso para ver este documento.');
@@ -230,8 +231,15 @@ class DocumentController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Document $document): Response
+    public function edit(Document $document): Response|RedirectResponse
     {
+        $user = request()->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id) {
+            abort(403, 'No tienes permiso para editar este documento.');
+        }
+
         if ($document->status !== 'PENDING') {
             return redirect()->route('documents.show', $document)
                 ->with('error', 'Solo se pueden editar documentos pendientes.');
@@ -255,19 +263,43 @@ class DocumentController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Document $document): RedirectResponse
+    public function update(UpdateDocumentRequest $request, Document $document): RedirectResponse
     {
+        $user = $request->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id) {
+            abort(403, 'No tienes permiso para editar este documento.');
+        }
+
         if ($document->status !== 'PENDING') {
             return redirect()->route('documents.show', $document)
                 ->with('error', 'Solo se pueden editar documentos pendientes.');
         }
 
-        // TODO: Implement UpdateDocumentRequest
-        $document->update($request->only([
-            'customer_id',
-            'issue_date',
-            'currency',
-        ]));
+        $data = $request->validated();
+        $items = $data['items'];
+        unset($data['items']);
+
+        // Actualizar documento
+        $document->update($data);
+
+        // Eliminar items existentes y crear nuevos
+        $document->items()->delete();
+
+        foreach ($items as $index => $item) {
+            DocumentItem::create([
+                'document_id' => $document->id,
+                'product_id' => $item['product_id'] ?? null,
+                'description' => $item['description'],
+                'quantity' => $item['quantity'],
+                'unit_price' => $item['unit_price'],
+                'total' => $item['total'],
+                'tax_type' => $item['tax_type'],
+                'igv' => $item['igv'] ?? 0,
+                'order' => $index + 1,
+            ]);
+        }
 
         return redirect()->route('documents.show', $document)
             ->with('success', 'Documento actualizado exitosamente.');
@@ -292,18 +324,41 @@ class DocumentController extends Controller
     /**
      * Send document to SUNAT.
      */
-    public function sendToSunat(Document $document): RedirectResponse
+    public function sendToSunat(Request $request, Document $document): RedirectResponse
     {
-        $this->authorize('sendToSunat', $document);
+        $user = $request->user();
+
+        // Verificar autorización manualmente
+        if ($user->company_id !== $document->company_id) {
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'No tienes permiso para enviar este documento a SUNAT.');
+        }
 
         if ($document->status !== 'PENDING') {
             return redirect()->route('documents.show', $document)
                 ->with('error', 'Solo se pueden enviar documentos pendientes.');
         }
 
-        SendDocumentToSunat::dispatch($document);
+        // Verificar que la empresa tenga credenciales SOL
+        $company = $document->company;
+        if (empty($company->user_sol) || empty($company->password_sol)) {
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'La empresa no tiene configuradas las credenciales SOL. Configure el Usuario SOL y Contraseña SOL en la configuración de la empresa.');
+        }
 
-        return redirect()->route('documents.show', $document)
-            ->with('success', 'Documento enviado a SUNAT. El proceso se está ejecutando en segundo plano.');
+        try {
+            SendDocumentToSunat::dispatch($document);
+
+            return redirect()->route('documents.show', $document)
+                ->with('success', 'Documento enviado a SUNAT. El proceso se está ejecutando en segundo plano. El estado se actualizará automáticamente cuando SUNAT responda.');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error dispatching job to send document to SUNAT', [
+                'document_id' => $document->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return redirect()->route('documents.show', $document)
+                ->with('error', 'Error al enviar el documento a SUNAT: ' . $e->getMessage());
+        }
     }
 }

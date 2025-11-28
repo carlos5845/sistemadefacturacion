@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { router } from '@inertiajs/react';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -8,10 +8,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import InputError from '@/components/input-error';
+import { useState } from 'react';
 
 interface AddCategoryModalProps {
     open: boolean;
@@ -19,11 +18,18 @@ interface AddCategoryModalProps {
     onCategoryCreated: (category: { id: number; name: string }) => void;
 }
 
-export function AddCategoryModal({ open, onClose, onCategoryCreated }: AddCategoryModalProps) {
+export function AddCategoryModal({
+    open,
+    onClose,
+    onCategoryCreated,
+}: AddCategoryModalProps) {
     const [name, setName] = useState('');
     const [description, setDescription] = useState('');
     const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState<{ name?: string; description?: string }>({});
+    const [errors, setErrors] = useState<{
+        name?: string;
+        description?: string;
+    }>({});
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,8 +37,14 @@ export function AddCategoryModal({ open, onClose, onCategoryCreated }: AddCatego
         setErrors({});
 
         try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
-                              document.querySelector('input[name="_token"]')?.getAttribute('value') || '';
+            const csrfToken =
+                document
+                    .querySelector('meta[name="csrf-token"]')
+                    ?.getAttribute('content') ||
+                document
+                    .querySelector('input[name="_token"]')
+                    ?.getAttribute('value') ||
+                '';
 
             const response = await fetch('/product-categories', {
                 method: 'POST',
@@ -50,7 +62,9 @@ export function AddCategoryModal({ open, onClose, onCategoryCreated }: AddCatego
                 if (data.errors) {
                     setErrors(data.errors);
                 } else {
-                    setErrors({ name: data.error || 'Error al crear la categoría' });
+                    setErrors({
+                        name: data.error || 'Error al crear la categoría',
+                    });
                 }
                 setProcessing(false);
                 return;
@@ -100,20 +114,26 @@ export function AddCategoryModal({ open, onClose, onCategoryCreated }: AddCatego
                             <InputError message={errors.name} />
                         </div>
                         <div className="grid gap-2">
-                            <Label htmlFor="category-description">Descripción</Label>
+                            <Label htmlFor="category-description">
+                                Descripción
+                            </Label>
                             <textarea
                                 id="category-description"
                                 value={description}
                                 onChange={(e) => setDescription(e.target.value)}
                                 rows={3}
-                                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                 placeholder="Descripción opcional"
                             />
                             <InputError message={errors.description} />
                         </div>
                     </div>
                     <DialogFooter>
-                        <Button type="button" variant="outline" onClick={handleClose}>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={handleClose}
+                        >
                             Cancelar
                         </Button>
                         <Button type="submit" disabled={processing}>
@@ -125,4 +145,3 @@ export function AddCategoryModal({ open, onClose, onCategoryCreated }: AddCatego
         </Dialog>
     );
 }
-
