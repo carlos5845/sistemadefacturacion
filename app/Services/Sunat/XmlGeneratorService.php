@@ -74,6 +74,14 @@ class XmlGeneratorService
         // 01=Factura, 03=Boleta, 07=Nota de Crédito, 08=Nota de Débito
         $xml .= '  <cbc:InvoiceTypeCode listID="0101" listName="Tipo de Documento" listAgencyName="PE:SUNAT" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01">' . $this->escapeXml($document->document_type) . '</cbc:InvoiceTypeCode>' . "\n";
 
+        // ===== LEYENDAS =====
+        // Monto en letras (Código 1000)
+        // Nota: Según UBL 2.1, cbc:Note va en el encabezado, antes de DocumentCurrencyCode
+        $numberToWords = new \App\Services\NumberToWordsService();
+        $legendValue = $numberToWords->toWords($document->total, $document->currency);
+        
+        $xml .= '  <cbc:Note languageLocaleID="1000">' . $this->escapeXml($legendValue) . '</cbc:Note>' . "\n";
+
         // cbc:DocumentCurrencyCode - Código de moneda
         $xml .= '  <cbc:DocumentCurrencyCode listID="ISO 4217 Alpha" listName="Currency" listAgencyName="United Nations Economic Commission for Europe" listURI="urn:un:unece:uncefact:codelist:specification:5639:1988">' . $this->escapeXml($document->currency) . '</cbc:DocumentCurrencyCode>' . "\n";
 
@@ -144,49 +152,6 @@ class XmlGeneratorService
             $xml .= '  </cac:AccountingCustomerParty>' . "\n";
         }
 
-        // ===== ITEMS DEL DOCUMENTO =====
-        foreach ($document->items as $index => $item) {
-            $xml .= '  <cac:InvoiceLine>' . "\n";
-            $xml .= '    <cbc:ID>' . ($index + 1) . '</cbc:ID>' . "\n";
-
-            // Cantidad
-            $unitCode = $this->getUnitCode($item->product?->unit_type ?? 'NIU');
-            $xml .= '    <cbc:InvoicedQuantity unitCode="' . $unitCode . '" unitCodeListID="UN/ECE rec 20" unitCodeListAgencyName="United Nations Economic Commission for Europe" unitCodeListName="Unit Code">' . number_format((float) $item->quantity, 2, '.', '') . '</cbc:InvoicedQuantity>' . "\n";
-
-            // Precio unitario
-            $xml .= '    <cbc:LineExtensionAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->unit_price, 2, '.', '') . '</cbc:LineExtensionAmount>' . "\n";
-
-            // Descripción del item
-            $xml .= '    <cac:Item>' . "\n";
-            $xml .= '      <cbc:Description>' . $this->escapeXml($item->description) . '</cbc:Description>' . "\n";
-            $xml .= '    </cac:Item>' . "\n";
-
-            // Precio del item
-            $xml .= '    <cac:Price>' . "\n";
-            $xml .= '      <cbc:PriceAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->unit_price, 2, '.', '') . '</cbc:PriceAmount>' . "\n";
-            $xml .= '    </cac:Price>' . "\n";
-
-            // Impuestos del item
-            if ((float) $item->igv > 0) {
-                $xml .= '    <cac:TaxTotal>' . "\n";
-                $xml .= '      <cbc:TaxAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->igv, 2, '.', '') . '</cbc:TaxAmount>' . "\n";
-                $xml .= '      <cac:TaxSubtotal>' . "\n";
-                $xml .= '        <cbc:TaxableAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) ($item->quantity * $item->unit_price), 2, '.', '') . '</cbc:TaxableAmount>' . "\n";
-                $xml .= '        <cbc:TaxAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->igv, 2, '.', '') . '</cbc:TaxAmount>' . "\n";
-                $xml .= '        <cac:TaxCategory>' . "\n";
-                $xml .= '          <cac:TaxScheme>' . "\n";
-                $xml .= '            <cbc:ID schemeID="UN/ECE 5305" schemeName="Tax Type Identifier" schemeAgencyName="United Nations Economic Commission for Europe">' . $this->escapeXml($item->tax_type) . '</cbc:ID>' . "\n";
-                $xml .= '            <cbc:Name>' . $this->getTaxTypeName($item->tax_type) . '</cbc:Name>' . "\n";
-                $xml .= '            <cbc:TaxTypeCode>' . $this->escapeXml($item->tax_type) . '</cbc:TaxTypeCode>' . "\n";
-                $xml .= '          </cac:TaxScheme>' . "\n";
-                $xml .= '        </cac:TaxCategory>' . "\n";
-                $xml .= '      </cac:TaxSubtotal>' . "\n";
-                $xml .= '    </cac:TaxTotal>' . "\n";
-            }
-
-            $xml .= '  </cac:InvoiceLine>' . "\n";
-        }
-
         // ===== TOTALES =====
         // Total de impuestos
         if ($document->total_igv > 0) {
@@ -196,6 +161,7 @@ class XmlGeneratorService
             $xml .= '      <cbc:TaxableAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $document->total_taxed, 2, '.', '') . '</cbc:TaxableAmount>' . "\n";
             $xml .= '      <cbc:TaxAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $document->total_igv, 2, '.', '') . '</cbc:TaxAmount>' . "\n";
             $xml .= '      <cac:TaxCategory>' . "\n";
+            $xml .= '        <cbc:ID schemeID="UN/ECE 5305" schemeName="Tax Category Identifier" schemeAgencyName="United Nations Economic Commission for Europe">S</cbc:ID>' . "\n";
             $xml .= '        <cac:TaxScheme>' . "\n";
             $xml .= '          <cbc:ID schemeID="UN/ECE 5305" schemeName="Tax Type Identifier" schemeAgencyName="United Nations Economic Commission for Europe">1000</cbc:ID>' . "\n";
             $xml .= '          <cbc:Name>IGV</cbc:Name>' . "\n";
@@ -213,7 +179,70 @@ class XmlGeneratorService
         $xml .= '    <cbc:PayableAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $document->total, 2, '.', '') . '</cbc:PayableAmount>' . "\n";
         $xml .= '  </cac:LegalMonetaryTotal>' . "\n";
 
+        // ===== ITEMS DEL DOCUMENTO =====
+        foreach ($document->items as $index => $item) {
+            $xml .= '  <cac:InvoiceLine>' . "\n";
+            $xml .= '    <cbc:ID>' . ($index + 1) . '</cbc:ID>' . "\n";
+
+            // Cantidad
+            $unitCode = $this->getUnitCode($item->product?->unit_type ?? 'NIU');
+            $xml .= '    <cbc:InvoicedQuantity unitCode="' . $unitCode . '" unitCodeListID="UN/ECE rec 20" unitCodeListAgencyName="United Nations Economic Commission for Europe">' . number_format((float) $item->quantity, 2, '.', '') . '</cbc:InvoicedQuantity>' . "\n";
+
+            // Precio unitario
+            $xml .= '    <cbc:LineExtensionAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->unit_price, 2, '.', '') . '</cbc:LineExtensionAmount>' . "\n";
+
+            // Referencia de precios (Precio con IGV)
+            $priceWithTax = $item->unit_price * (1 + ($item->igv > 0 ? 0.18 : 0));
+            $xml .= '    <cac:PricingReference>' . "\n";
+            $xml .= '      <cac:AlternativeConditionPrice>' . "\n";
+            $xml .= '        <cbc:PriceAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $priceWithTax, 2, '.', '') . '</cbc:PriceAmount>' . "\n";
+            $xml .= '        <cbc:PriceTypeCode listName="Tipo de Precio" listAgencyName="PE:SUNAT" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo16">01</cbc:PriceTypeCode>' . "\n";
+            $xml .= '      </cac:AlternativeConditionPrice>' . "\n";
+            $xml .= '    </cac:PricingReference>' . "\n";
+
+            // Impuestos del item
+            if ((float) $item->igv > 0) {
+                $xml .= '    <cac:TaxTotal>' . "\n";
+                $xml .= '      <cbc:TaxAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->igv, 2, '.', '') . '</cbc:TaxAmount>' . "\n";
+                $xml .= '      <cac:TaxSubtotal>' . "\n";
+                $xml .= '        <cbc:TaxableAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) ($item->quantity * $item->unit_price), 2, '.', '') . '</cbc:TaxableAmount>' . "\n";
+                $xml .= '        <cbc:TaxAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->igv, 2, '.', '') . '</cbc:TaxAmount>' . "\n";
+                $xml .= '        <cac:TaxCategory>' . "\n";
+                $xml .= '          <cbc:ID schemeID="UN/ECE 5305" schemeName="Tax Category Identifier" schemeAgencyName="United Nations Economic Commission for Europe">' . $this->getTaxCategoryId($item->tax_type) . '</cbc:ID>' . "\n";
+                // Percent (IGV 18%)
+                if ($this->getTaxSchemeId($item->tax_type) === '1000') {
+                    $xml .= '          <cbc:Percent>18.00</cbc:Percent>' . "\n";
+                }
+                // TaxExemptionReasonCode (Afectación al IGV - Catálogo 07)
+                $xml .= '          <cbc:TaxExemptionReasonCode listAgencyName="PE:SUNAT" listName="Afectacion del IGV" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo07">' . $this->escapeXml($item->tax_type) . '</cbc:TaxExemptionReasonCode>' . "\n";
+                $xml .= '          <cac:TaxScheme>' . "\n";
+                $xml .= '            <cbc:ID schemeID="UN/ECE 5305" schemeName="Tax Type Identifier" schemeAgencyName="United Nations Economic Commission for Europe">' . $this->getTaxSchemeId($item->tax_type) . '</cbc:ID>' . "\n";
+                $xml .= '            <cbc:Name>' . $this->getTaxSchemeName($item->tax_type) . '</cbc:Name>' . "\n";
+                $xml .= '            <cbc:TaxTypeCode>' . $this->getTaxTypeCode($item->tax_type) . '</cbc:TaxTypeCode>' . "\n";
+                $xml .= '          </cac:TaxScheme>' . "\n";
+                $xml .= '        </cac:TaxCategory>' . "\n";
+                $xml .= '      </cac:TaxSubtotal>' . "\n";
+                $xml .= '    </cac:TaxTotal>' . "\n";
+            }
+
+            // Descripción del item
+            $xml .= '    <cac:Item>' . "\n";
+            $xml .= '      <cbc:Description>' . $this->escapeXml($item->description) . '</cbc:Description>' . "\n";
+            $xml .= '    </cac:Item>' . "\n";
+
+            // Precio del item
+            $xml .= '    <cac:Price>' . "\n";
+            $xml .= '      <cbc:PriceAmount currencyID="' . $this->escapeXml($document->currency) . '">' . number_format((float) $item->unit_price, 2, '.', '') . '</cbc:PriceAmount>' . "\n";
+            $xml .= '    </cac:Price>' . "\n";
+
+            $xml .= '  </cac:InvoiceLine>' . "\n";
+        }
+
+
+
         $xml .= '</Invoice>';
+        
+        Log::info('Generated XML:', ['xml' => $xml]);
 
         return $xml;
     }
@@ -266,10 +295,15 @@ class XmlGeneratorService
             // Asegurar que el certificado esté en formato PEM válido
             $certPEM = trim($certData);
 
+            // Limpiar Bag Attributes si existen
+            if (preg_match('/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s', $certPEM, $matches)) {
+                $certPEM = $matches[0];
+            }
+
             // Si no tiene los headers PEM, intentar leerlo como DER y convertir
             if (!str_contains($certPEM, '-----BEGIN CERTIFICATE-----')) {
                 // Intentar leer como DER y convertir a PEM
-                $certResource = openssl_x509_read($certData);
+                $certResource = @openssl_x509_read($certData);
                 if ($certResource === false) {
                     // Si falla, intentar como contenido binario
                     $certResource = @openssl_x509_read('data://application/x-x509-cert;base64,' . base64_encode($certData));
@@ -284,7 +318,7 @@ class XmlGeneratorService
             }
 
             // Verificar que el certificado sea válido antes de parsearlo
-            $certResource = openssl_x509_read($certPEM);
+            $certResource = @openssl_x509_read($certPEM);
             if ($certResource === false) {
                 $errorMsg = 'No se pudo leer el certificado X.509. ';
                 while (($error = openssl_error_string()) !== false) {
@@ -520,13 +554,13 @@ class XmlGeneratorService
             $objDSig = new XMLSecurityDSig();
             $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
 
-            // Usar el primer nodo hijo como referencia (Invoice)
+            // Usar el documento completo como referencia para evitar agregar atributo Id al nodo raíz
             $rootNode = $doc->documentElement;
             $objDSig->addReferenceList(
-                [$rootNode],
+                [$doc],
                 XMLSecurityDSig::SHA256,
                 ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-                ['force_uri' => true]
+                ['force_uri' => true, 'overwrite' => false]
             );
 
             // Cargar la clave privada del certificado
@@ -611,10 +645,15 @@ class XmlGeneratorService
                 // Asegurar que el certificado esté en formato PEM válido
                 $certData = trim($certs['cert']);
 
+                // Limpiar Bag Attributes si existen (común en PFX exportados)
+                if (preg_match('/-----BEGIN CERTIFICATE-----.*?-----END CERTIFICATE-----/s', $certData, $matches)) {
+                    $certData = $matches[0];
+                }
+
                 // Verificar que el certificado tenga los headers PEM
                 if (!str_contains($certData, '-----BEGIN CERTIFICATE-----')) {
                     // Intentar leer y re-exportar el certificado para asegurar formato PEM válido
-                    $certResource = openssl_x509_read($certData);
+                    $certResource = @openssl_x509_read($certData);
                     if ($certResource === false) {
                         throw new \Exception('El certificado extraído del archivo PFX/P12 no es un certificado X.509 válido.');
                     }
@@ -623,7 +662,7 @@ class XmlGeneratorService
                 }
 
                 // Validar que el certificado se pueda leer correctamente
-                $testRead = openssl_x509_read($certData);
+                $testRead = @openssl_x509_read($certData);
                 if ($testRead === false) {
                     $errorMsg = 'El certificado extraído no se puede leer correctamente. ';
                     while (($error = openssl_error_string()) !== false) {
@@ -631,20 +670,36 @@ class XmlGeneratorService
                     }
                     throw new \Exception($errorMsg);
                 }
+                Log::info('Certificate extracted and validated successfully');
             }
 
             // Crear clave de seguridad
+            Log::info('Loading private key into XMLSecurityKey');
             $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, ['type' => 'private']);
-            $objKey->loadKey($privateKey, false, true);
+            // FIX: El tercer parámetro debe ser false porque estamos cargando una clave privada, no un certificado
+            $objKey->loadKey($privateKey, false, false);
 
             // Agregar el certificado X509 a la firma
+            Log::info('Adding 509 cert to signature');
             $objDSig->add509Cert($certData, true);
 
             // Insertar la firma en el XML
+            Log::info('Signing XML');
             $objDSig->sign($objKey);
 
             // Agregar la firma al documento
-            $objDSig->appendSignature($rootNode);
+            Log::info('Appending signature');
+            
+            // Buscar el nodo ExtensionContent para insertar la firma allí
+            $extensionContentNode = $doc->getElementsByTagNameNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ExtensionContent')->item(0);
+            
+            if ($extensionContentNode) {
+                $objDSig->appendSignature($extensionContentNode);
+            } else {
+                // Fallback si no se encuentra (no debería pasar si el XML se generó bien)
+                Log::warning('ExtensionContent node not found, appending to root node');
+                $objDSig->appendSignature($rootNode);
+            }
 
             // Obtener el XML firmado básico
             $signedXml = $doc->saveXML();
@@ -655,6 +710,7 @@ class XmlGeneratorService
             }
 
             // Agregar elementos XAdES-BES según requisitos de SUNAT
+            Log::info('Adding XAdES-BES elements');
             $signedXml = $this->addXAdESBES($signedXml, $certData);
 
             Log::info('XML signed successfully with XAdES-BES', [
@@ -667,6 +723,8 @@ class XmlGeneratorService
         } catch (\Exception $e) {
             Log::error('Error signing XML with digital certificate', [
                 'error' => $e->getMessage(),
+                'line' => $e->getLine(),
+                'file' => $e->getFile(),
                 'trace' => $e->getTraceAsString(),
             ]);
 
@@ -688,4 +746,62 @@ class XmlGeneratorService
 
         return hash('sha256', $xmlCleaned);
     }
+
+    /**
+     * Get Tax Scheme ID based on tax type code.
+     */
+    protected function getTaxSchemeId(string $taxType): string
+    {
+        return match ($taxType) {
+            '10' => '1000', // IGV - Gravado
+            '20' => '9997', // Exonerado
+            '30' => '9998', // Inafecto
+            '40' => '9995', // Exportación
+            default => '1000',
+        };
+    }
+
+    /**
+     * Get Tax Scheme Name based on tax type code.
+     */
+    protected function getTaxSchemeName(string $taxType): string
+    {
+        return match ($taxType) {
+            '10' => 'IGV',
+            '20' => 'EXO',
+            '30' => 'INA',
+            '40' => 'EXP',
+            default => 'IGV',
+        };
+    }
+
+    /**
+     * Get Tax Type Code based on tax type code.
+     */
+    protected function getTaxTypeCode(string $taxType): string
+    {
+        return match ($taxType) {
+            '10' => 'VAT',
+            '20' => 'VAT',
+            '30' => 'FRE',
+            '40' => 'FRE',
+            default => 'VAT',
+        };
+    }
+
+    /**
+     * Get Tax Category ID based on tax type code.
+     */
+    protected function getTaxCategoryId(string $taxType): string
+    {
+        return match ($taxType) {
+            '10' => 'S', // IGV - Standard
+            '20' => 'E', // Exonerado - Exempt
+            '30' => 'O', // Inafecto - Outside scope
+            '40' => 'G', // Exportación - Free Export Item
+            default => 'S',
+        };
+    }
+
+
 }

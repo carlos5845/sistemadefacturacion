@@ -45,3 +45,4 @@ if (openssl_pkcs12_export($cert, $pfx, $key, $password)) {
     die("Error al crear PFX\n");
 }
 
+

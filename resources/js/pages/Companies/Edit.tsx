@@ -69,7 +69,7 @@ export default function CompaniesEdit({ company }: Props) {
                         ubigeo: company.ubigeo || '',
                         user_sol: company.user_sol || '',
                         password_sol: '',
-                        certificate: '',
+
                         certificate_password: '',
                     }}
                 >
@@ -232,18 +232,13 @@ export default function CompaniesEdit({ company }: Props) {
                                         </p>
                                     )}
                                     <p className="text-xs text-muted-foreground">
-                                        <strong>Requerido por SUNAT:</strong>{' '}
-                                        Suba el archivo de certificado digital
+                                        <strong>Requerido:</strong> Suba el
+                                        archivo de certificado digital de prueba
                                         en formato PFX/P12 (.p12 o .pfx).
                                         <br />
-                                        <strong>Nota:</strong> El certificado
-                                        debe ser emitido por una entidad
-                                        certificadora autorizada por SUNAT.
-                                        <br />
-                                        <strong>Para desarrollo:</strong> Puede
-                                        dejarlo vacío. El sistema funcionará en
-                                        modo simulación y generará XML sin
-                                        firmar.
+                                        <strong>Nota:</strong> Este certificado
+                                        es obligatorio para firmar los
+                                        comprobantes y enviarlos a SUNAT.
                                         <br />
                                         Si ya tiene un certificado configurado,
                                         déjelo vacío para mantener el actual.
@@ -253,35 +248,7 @@ export default function CompaniesEdit({ company }: Props) {
                                     />
                                 </div>
 
-                                <div className="grid gap-2 md:col-span-2">
-                                    <Label htmlFor="certificate">
-                                        Certificado Digital (PEM) - Alternativa
-                                        - Opcional
-                                    </Label>
-                                    <textarea
-                                        id="certificate"
-                                        name="certificate"
-                                        rows={6}
-                                        className="flex min-h-[120px] w-full rounded-md border border-input bg-transparent px-3 py-2 font-mono text-xs shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
-                                        placeholder="-----BEGIN CERTIFICATE-----&#10;...&#10;-----END CERTIFICATE-----&#10;&#10;-----BEGIN PRIVATE KEY-----&#10;...&#10;-----END PRIVATE KEY-----"
-                                        defaultValue=""
-                                        aria-invalid={
-                                            errors.certificate
-                                                ? 'true'
-                                                : undefined
-                                        }
-                                    />
-                                    <p className="text-xs text-muted-foreground">
-                                        <strong>Alternativa:</strong> Si
-                                        prefiere, puede pegar el contenido del
-                                        certificado en formato PEM.
-                                        <br />
-                                        <strong>Recomendado:</strong> Use el
-                                        formato PFX/P12 (opción anterior) que es
-                                        el requerido por SUNAT.
-                                    </p>
-                                    <InputError message={errors.certificate} />
-                                </div>
+
 
                                 <div className="grid gap-2">
                                     <Label htmlFor="certificate_password">

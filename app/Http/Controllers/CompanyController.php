@@ -201,20 +201,6 @@ class CompanyController extends Controller
                     ->withErrors(['certificate_file' => 'Error al validar el certificado: ' . $e->getMessage()])
                     ->withInput();
             }
-        } elseif (! empty($data['certificate'])) {
-            // Si se proporciona certificado como texto (PEM), mantener el comportamiento actual
-            // Si se proporciona un nuevo certificado PEM, también requerir la contraseña
-            if (empty($data['certificate_password'])) {
-                // Si no se proporciona nueva contraseña pero hay certificado nuevo,
-                // usar la contraseña actual si existe
-                if (empty($company->certificate_password)) {
-                    return redirect()->back()
-                        ->withErrors(['certificate_password' => 'Debe proporcionar la contraseña del certificado cuando sube un nuevo certificado.'])
-                        ->withInput();
-                }
-                // Mantener la contraseña actual
-                unset($data['certificate_password']);
-            }
         } else {
             // No se proporciona nuevo certificado, mantener el actual
             unset($data['certificate']);

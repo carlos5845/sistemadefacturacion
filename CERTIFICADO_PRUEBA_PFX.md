@@ -125,3 +125,4 @@ Después de ejecutar el script, encontrarás:
 
 **Importante**: Los archivos en `storage/app/certificates/` están en `.gitignore` y no se subirán al repositorio por seguridad.
 
+

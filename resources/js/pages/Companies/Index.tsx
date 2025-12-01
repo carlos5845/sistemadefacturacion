@@ -2,7 +2,7 @@ import CompanyController from '@/actions/App/Http/Controllers/CompanyController'
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState } from 'react';
-import { Eye } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +11,14 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
 import { index, create } from '@/routes/companies';
@@ -44,6 +52,15 @@ interface Props {
 
 export default function CompaniesIndex({ companies, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+
+    const handleDelete = () => {
+        if (!companyToDelete) return;
+        router.delete(CompanyController.destroy.url(companyToDelete.id), {
+            preserveScroll: true,
+            onSuccess: () => setCompanyToDelete(null),
+        });
+    };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -121,6 +138,25 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
+
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                                                onClick={() => setCompanyToDelete(company)}
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                                <span className="sr-only">Eliminar empresa</span>
+                                                            </Button>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>Eliminar empresa</p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
                                             </div>
                                         </td>
                                     </tr>
@@ -130,6 +166,27 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                     </table>
                 </div>
             </div>
+
+            <Dialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>¿Estás seguro?</DialogTitle>
+                        <DialogDescription>
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente la empresa
+                            <span className="font-medium text-foreground"> {companyToDelete?.business_name} </span>
+                            y todos sus datos asociados.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setCompanyToDelete(null)}>
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={handleDelete}>
+                            Eliminar
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </AppLayout>
     );
 }

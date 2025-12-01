@@ -206,3 +206,4 @@ openssl pkcs12 -info -in storage/app/certificates/test_certificate.p12 -nodes
 
 ¿Necesitas ayuda? Revisa los logs en `storage/logs/laravel.log` para más detalles sobre cualquier error.
 
+

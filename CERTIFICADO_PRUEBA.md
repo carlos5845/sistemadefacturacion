@@ -67,3 +67,4 @@ Después de configurar el certificado:
 
 Si hay errores, revisa los logs en `storage/logs/laravel.log`.
 
+

@@ -15,16 +15,9 @@ class SunatApiService
      */
     protected function getEndpoint(Document $document): string
     {
-        $environment = config('services.sunat.environment', 'beta');
         $isRetention = $this->isRetentionDocument($document->document_type);
 
-        if ($environment === 'production') {
-            return $isRetention
-                ? config('services.sunat.endpoint_retentions_prod', 'https://e-factura.sunat.gob.pe/ol-ti-itemision-otroscpe-gem/billService')
-                : config('services.sunat.endpoint_invoices_prod', 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService');
-        }
-
-        // Beta/Testing environment
+        // Beta/Testing environment only
         return $isRetention
             ? config('services.sunat.endpoint_retentions', 'https://e-beta.sunat.gob.pe/ol-ti-itemision-otroscpe-gem-beta/billService')
             : config('services.sunat.endpoint_invoices', 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService');
@@ -61,10 +54,10 @@ class SunatApiService
                 throw new \Exception('La empresa no tiene configuradas las credenciales SOL (Usuario SOL y Contraseña SOL).');
             }
 
-            // Generar XML si no existe
+            // Generar XML siempre para asegurar que se usen los últimos cambios
             $xmlGenerator = app(XmlGeneratorService::class);
 
-            if (empty($document->xml)) {
+            // if (empty($document->xml)) {
                 try {
                     $xml = $xmlGenerator->generate($document);
                     $hash = $xmlGenerator->generateHash($xml);
@@ -73,6 +66,7 @@ class SunatApiService
                     $document->update([
                         'xml' => $xml,
                         'hash' => $hash,
+                        'xml_signed' => null, // Limpiar firma anterior para forzar refirma
                     ]);
 
                     Log::info('XML generated for document', [
@@ -87,9 +81,9 @@ class SunatApiService
 
                     throw new \Exception('Error al generar el XML: ' . $e->getMessage());
                 }
-            } else {
-                $xml = $document->xml;
-            }
+            // } else {
+            //     $xml = $document->xml;
+            // }
 
             // Firmar XML si no está firmado
             $xmlSigned = trim($document->xml_signed ?? '');
@@ -299,105 +293,146 @@ class SunatApiService
 
         // Parsear respuesta SOAP
         $soapResponse = $response->body();
+        Log::info('Raw SOAP Response', ['body' => $soapResponse]);
         $statusCode = 'ERROR';
         $statusMessage = 'Error desconocido';
         $cdrXml = null;
         $cdrZip = null;
+        $cdrXml = null;
+        $statusCode = 'ERROR';
+        $statusMessage = 'Error desconocido al procesar la respuesta de SUNAT';
 
         // Intentar parsear respuesta SOAP
         try {
+            Log::info('Raw SUNAT Response', [
+                'document_id' => $document->id,
+                'response_snippet' => substr($soapResponse, 0, 1000)
+            ]);
+
             $xml = simplexml_load_string($soapResponse);
+            
             if ($xml !== false) {
-                // Registrar namespaces SOAP
+                // Registrar namespaces comunes
                 $xml->registerXPathNamespace('soap', 'http://schemas.xmlsoap.org/soap/envelope/');
+                $xml->registerXPathNamespace('soap-env', 'http://schemas.xmlsoap.org/soap/envelope/');
+                $xml->registerXPathNamespace('ns2', 'http://service.sunat.gob.pe');
                 $xml->registerXPathNamespace('ser', 'http://service.sunat.gob.pe');
+                $xml->registerXPathNamespace('br', 'http://service.sunat.gob.pe'); // A veces usan 'br'
 
-                // Buscar applicationResponse (CDR)
-                // SUNAT devuelve el CDR en un ZIP codificado en Base64
-                $applicationResponse = $xml->xpath('//ser:applicationResponse');
-                if (!empty($applicationResponse)) {
-                    $cdrBase64 = (string) $applicationResponse[0];
-                    // El CDR viene en base64 como ZIP, decodificarlo
-                    $cdrZipContent = base64_decode($cdrBase64);
-                    if ($cdrZipContent !== false) {
-                        // Guardar ZIP del CDR
-                        $cdrZip = $cdrZipContent;
-
-                        // Intentar extraer XML del ZIP
-                        $zip = new \ZipArchive();
-                        $zipPath = sys_get_temp_dir() . '/' . uniqid('cdr_zip_', true) . '.zip';
-                        file_put_contents($zipPath, $cdrZipContent);
-
-                        if ($zip->open($zipPath) === true) {
-                            // Buscar archivo XML dentro del ZIP (generalmente R-{RUC}-{SERIE}-{NUMERO}.xml)
-                            $xmlFileName = null;
-                            for ($i = 0; $i < $zip->numFiles; $i++) {
-                                $fileName = $zip->getNameIndex($i);
-                                if (pathinfo($fileName, PATHINFO_EXTENSION) === 'xml') {
-                                    $xmlFileName = $fileName;
-                                    break;
+                // 1. Buscar Fault (Error de SOAP)
+                // Puede estar como soap:Fault o soap-env:Fault
+                $faults = $xml->xpath('//soap:Fault | //soap-env:Fault');
+                
+                if (!empty($faults)) {
+                    $fault = $faults[0];
+                    $faultString = (string) $fault->faultstring;
+                    $statusCode = 'FAULT';
+                    $statusMessage = $faultString;
+                    
+                    Log::error('SUNAT SOAP Fault', [
+                        'document_id' => $document->id,
+                        'fault' => $faultString
+                    ]);
+                } 
+                // 2. Buscar applicationResponse (CDR)
+                else {
+                    $responses = $xml->xpath('//ns2:applicationResponse | //ser:applicationResponse | //br:applicationResponse | //applicationResponse');
+                    
+                    if (!empty($responses)) {
+                        $cdrBase64 = (string) $responses[0];
+                        
+                        if (!empty($cdrBase64)) {
+                            // Decodificar ZIP
+                            $cdrZipContent = base64_decode($cdrBase64);
+                            
+                            if ($cdrZipContent !== false) {
+                                $cdrZip = $cdrBase64; // Guardar el base64 original en BD
+                                
+                                // Guardar ZIP temporalmente
+                                $zipPath = sys_get_temp_dir() . '/' . uniqid('cdr_', true) . '.zip';
+                                file_put_contents($zipPath, $cdrZipContent);
+                                
+                                $zip = new \ZipArchive();
+                                if ($zip->open($zipPath) === true) {
+                                    // Buscar archivo XML dentro del ZIP (R-*.xml)
+                                    $xmlFileName = null;
+                                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                                        $fileName = $zip->getNameIndex($i);
+                                        if (str_starts_with($fileName, 'R-') && str_ends_with($fileName, '.xml')) {
+                                            $xmlFileName = $fileName;
+                                            break;
+                                        }
+                                    }
+                                    
+                                    if ($xmlFileName) {
+                                        $cdrXmlContent = $zip->getFromName($xmlFileName);
+                                        if ($cdrXmlContent !== false) {
+                                            $cdrXml = $cdrXmlContent;
+                                            
+                                            // Parsear XML del CDR para obtener estado real
+                                            $cdrDom = new \DOMDocument();
+                                            $cdrDom->loadXML($cdrXmlContent);
+                                            
+                                            $xpath = new \DOMXPath($cdrDom);
+                                            $xpath->registerNamespace('cbc', 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2');
+                                            
+                                            $responseCodeNode = $xpath->query('//cbc:ResponseCode')->item(0);
+                                            $descriptionNode = $xpath->query('//cbc:Description')->item(0);
+                                            
+                                            if ($responseCodeNode) {
+                                                $statusCode = $responseCodeNode->nodeValue;
+                                            }
+                                            
+                                            if ($descriptionNode) {
+                                                $statusMessage = $descriptionNode->nodeValue;
+                                            }
+                                            
+                                            Log::info('CDR processed successfully', [
+                                                'document_id' => $document->id,
+                                                'sunat_code' => $statusCode,
+                                                'message' => $statusMessage
+                                            ]);
+                                        }
+                                    }
+                                    $zip->close();
                                 }
+                                @unlink($zipPath);
                             }
-
-                            if ($xmlFileName !== null) {
-                                $cdrXml = $zip->getFromName($xmlFileName);
-                                if ($cdrXml === false) {
-                                    Log::warning('Could not extract XML from CDR ZIP', [
-                                        'document_id' => $document->id,
-                                        'zip_file' => $xmlFileName,
-                                    ]);
-                                }
-                            }
-
-                            $zip->close();
                         }
-
-                        // Limpiar archivo temporal
-                        @unlink($zipPath);
                     }
-                }
-
-                // Buscar código de estado
-                $statusCodeNodes = $xml->xpath('//ser:statusCode');
-                if (!empty($statusCodeNodes)) {
-                    $statusCode = (string) $statusCodeNodes[0];
-                }
-
-                // Buscar mensaje
-                $statusMessageNodes = $xml->xpath('//ser:statusMessage');
-                if (!empty($statusMessageNodes)) {
-                    $statusMessage = (string) $statusMessageNodes[0];
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Error parsing SOAP response', [
+            Log::error('Error parsing SUNAT response', [
                 'document_id' => $document->id,
-                'error' => $e->getMessage(),
-                'response' => substr($soapResponse, 0, 500),
+                'error' => $e->getMessage()
             ]);
-
-            // Si no se puede parsear, intentar extraer información básica
-            if (str_contains($soapResponse, 'applicationResponse')) {
-                // Hay un CDR en la respuesta
-                preg_match('/<applicationResponse[^>]*>(.*?)<\/applicationResponse>/s', $soapResponse, $matches);
-                if (!empty($matches[1])) {
-                    $cdrXml = base64_decode(trim($matches[1]));
-                }
-            }
+            $statusMessage = 'Error interno al procesar respuesta: ' . $e->getMessage();
         }
 
-        // Update document status
-        // Código 0 = Aceptado, otros códigos = Rechazado o Error
-        $isAccepted = ($statusCode === '0' || $statusCode === 0);
+        // Actualizar estado del documento
+        // Código 0 = Aceptado
+        $isAccepted = ($statusCode === '0');
+        $status = $isAccepted ? 'ACCEPTED' : 'REJECTED';
+        
+        // Si es un Fault, mantener como REJECTED pero con mensaje claro
+        if ($statusCode === 'FAULT') {
+            $status = 'REJECTED';
+        }
+
         $document->update([
-            'status' => $isAccepted ? 'ACCEPTED' : 'REJECTED',
+            'status' => $status,
+            'sunat_code' => $statusCode,
+            'sunat_message' => $statusMessage,
+            'cdr_zip' => $cdrZip,
+            'cdr_xml' => $cdrXml
         ]);
 
         return SunatResponse::create([
             'document_id' => $document->id,
             'cdr_xml' => $cdrXml,
-            'cdr_zip' => $cdrZip, // ZIP del CDR completo extraído de la respuesta
-            'sunat_code' => (string) $statusCode,
+            'cdr_zip' => $cdrZip,
+            'sunat_code' => $statusCode,
             'sunat_message' => $statusMessage,
         ]);
     }
@@ -440,7 +475,8 @@ class SunatApiService
     protected function compressXmlToZip(Document $document, string $xmlSigned): string
     {
         // Nombre del archivo XML (sin extensión .zip todavía)
-        $xmlFileName = $document->series . '-' . str_pad((string) $document->number, 8, '0', STR_PAD_LEFT) . '.xml';
+        // El nombre del XML debe coincidir con el nombre del ZIP (RUC-TIPO-SERIE-NUMERO)
+        $xmlFileName = $document->company->ruc . '-' . $document->document_type . '-' . $document->series . '-' . str_pad((string) $document->number, 8, '0', STR_PAD_LEFT) . '.xml';
 
         // Crear ZIP en memoria
         $zip = new \ZipArchive();
@@ -495,7 +531,8 @@ class SunatApiService
         $zipContent = $this->compressXmlToZip($document, $xmlSigned);
 
         // Nombre del archivo ZIP (SUNAT requiere .zip, no .xml)
-        $zipFileName = $document->series . '-' . str_pad((string) $document->number, 8, '0', STR_PAD_LEFT) . '.zip';
+        // Formato: RUC-TIPO-SERIE-NUMERO.zip
+        $zipFileName = $document->company->ruc . '-' . $document->document_type . '-' . $document->series . '-' . str_pad((string) $document->number, 8, '0', STR_PAD_LEFT) . '.zip';
 
         // Codificar ZIP en Base64
         $fileContent = base64_encode($zipContent);

@@ -40,14 +40,9 @@ return [
         'endpoint_invoices' => env('SUNAT_ENDPOINT_INVOICES', 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService'),
         'endpoint_retentions' => env('SUNAT_ENDPOINT_RETENTIONS', 'https://e-beta.sunat.gob.pe/ol-ti-itemision-otroscpe-gem-beta/billService'),
         
-        // Endpoints para producción
-        'endpoint_invoices_prod' => env('SUNAT_ENDPOINT_INVOICES_PROD', 'https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService'),
-        'endpoint_retentions_prod' => env('SUNAT_ENDPOINT_RETENTIONS_PROD', 'https://e-factura.sunat.gob.pe/ol-ti-itemision-otroscpe-gem/billService'),
-        
         'timeout' => env('SUNAT_TIMEOUT', 30),
         'retry_attempts' => env('SUNAT_RETRY_ATTEMPTS', 3),
         'retry_delay' => env('SUNAT_RETRY_DELAY', 5),
-        'environment' => env('SUNAT_ENVIRONMENT', 'beta'), // 'beta' o 'production'
     ],
 
 ];

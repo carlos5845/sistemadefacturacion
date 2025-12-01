@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             CatalogDocumentTypeSeeder::class,
             CatalogUnitSeeder::class,
             CatalogTaxTypeSeeder::class,
+            CompanySeeder::class,
         ]);
     }
 }
