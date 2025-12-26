@@ -1,0 +1,54 @@
+
+  Dropping all tables ............................. 5.44ms DONE
+
+   INFO  Preparing database.  
+
+  Creating migration table ....................... 11.91ms DONE
+
+   INFO  Running migrations.  
+
+  0001_01_01_000000_create_users_table ........... 31.34ms DONE
+  0001_01_01_000001_create_cache_table ........... 10.18ms DONE
+  0001_01_01_000002_create_jobs_table ............ 25.92ms DONE
+  2025_08_26_100418_add_two_factor_columns_to_users_table  16.04ms DONE
+  2025_11_14_163204_create_permission_tables ..... 49.60ms DONE
+  2025_11_14_163219_create_catalog_document_types_table  11.08ms DONE
+  2025_11_14_163231_create_catalog_units_table ... 10.46ms DONE
+  2025_11_14_163242_create_catalog_tax_types_table  10.44ms DONE
+  2025_11_14_163254_create_companies_table ....... 10.54ms DONE
+  2025_11_14_163305_add_company_id_to_users_table  34.67ms DONE
+  2025_11_14_163328_create_customers_table ....... 10.57ms DONE
+  2025_11_14_163340_create_product_categories_table  5.37ms DONE
+  2025_11_14_163352_create_products_table ......... 5.53ms DONE
+  2025_11_14_163403_create_warehouses_table ....... 5.82ms DONE
+  2025_11_14_163418_create_inventory_stocks_table  10.64ms DONE
+  2025_11_14_163450_create_documents_table ....... 11.06ms DONE
+  2025_11_14_163502_create_document_items_table ... 5.82ms DONE
+  2025_11_14_163513_create_document_payments_table  5.69ms DONE
+  2025_11_14_163524_create_document_taxes_table ... 5.44ms DONE
+  2025_11_14_163535_create_sunat_responses_table . 11.01ms DONE
+  2025_11_14_163548_create_audit_logs_table ...... 11.39ms DONE
+  2025_12_01_004235_add_sunat_response_fields_to_documents_table  24.10ms DONE
+  2025_12_15_011603_change_documents_status_to_string  12.23ms FAIL
+
+   Illuminate\Database\QueryException 
+
+  SQLSTATE[HY000]: General error: 1 table documents_temp has 22 columns but 21 values were supplied (Connection: sqlite, SQL: INSERT INTO documents_temp SELECT * FROM documents)
+
+  at vendor\laravel\framework\src\Illuminate\Database\Connection.php:824
+    820Ôûò                     $this->getName(), $query, $this->prepareBindings($bindings), $e
+    821Ôûò                 );
+    822Ôûò             }
+    823Ôûò 
+  Ô×£ 824Ôûò             throw new QueryException(
+    825Ôûò                 $this->getName(), $query, $this->prepareBindings($bindings), $e
+    826Ôûò             );
+    827Ôûò         }
+    828Ôûò     }
+
+  1   vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+      PDOException::("SQLSTATE[HY000]: General error: 1 table documents_temp has 22 columns but 21 values were supplied")
+
+  2   vendor\laravel\framework\src\Illuminate\Database\Connection.php:564
+      PDO::prepare()
+

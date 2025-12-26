@@ -171,21 +171,25 @@ class DocumentController extends Controller
             $data['customer_id'] = null;
         }
 
-        $document = Document::create($data);
+        $document = \Illuminate\Support\Facades\DB::transaction(function () use ($data, $items) {
+            $document = Document::create($data);
 
-        foreach ($items as $index => $item) {
-            DocumentItem::create([
-                'document_id' => $document->id,
-                'product_id' => $item['product_id'] ?? null,
-                'description' => $item['description'],
-                'quantity' => $item['quantity'],
-                'unit_price' => $item['unit_price'],
-                'total' => $item['total'],
-                'tax_type' => $item['tax_type'],
-                'igv' => $item['igv'] ?? 0,
-                'order' => $index + 1,
-            ]);
-        }
+            foreach ($items as $index => $item) {
+                DocumentItem::create([
+                    'document_id' => $document->id,
+                    'product_id' => !empty($item['product_id']) ? $item['product_id'] : null,
+                    'description' => $item['description'],
+                    'quantity' => $item['quantity'],
+                    'unit_price' => $item['unit_price'],
+                    'total' => $item['total'],
+                    'tax_type' => $item['tax_type'],
+                    'igv' => $item['igv'] ?? 0,
+                    'order' => $index + 1,
+                ]);
+            }
+
+            return $document;
+        });
 
         return redirect()->route('documents.show', $document)
             ->with('success', 'Documento creado exitosamente.')
@@ -399,7 +403,7 @@ class DocumentController extends Controller
         foreach ($items as $index => $item) {
             DocumentItem::create([
                 'document_id' => $document->id,
-                'product_id' => $item['product_id'] ?? null,
+                'product_id' => !empty($item['product_id']) ? $item['product_id'] : null,
                 'description' => $item['description'],
                 'quantity' => $item['quantity'],
                 'unit_price' => $item['unit_price'],
@@ -419,9 +423,11 @@ class DocumentController extends Controller
      */
     public function destroy(Document $document): RedirectResponse
     {
-        if ($document->status !== 'PENDING') {
+        // Permitir eliminar si está PENDING o REJECTED (o cualquier estado que no sea final exitoso)
+        // Evitar eliminar si ya fue aceptado o anulado oficialmente en SUNAT
+        if (in_array($document->status, ['ACCEPTED', 'CANCELED'])) {
             return redirect()->route('documents.index')
-                ->with('error', 'Solo se pueden eliminar documentos pendientes.');
+                ->with('error', 'No se pueden eliminar documentos que ya han sido aceptados o anulados.');
         }
 
         $document->delete();
