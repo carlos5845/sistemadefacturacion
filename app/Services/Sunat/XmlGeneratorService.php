@@ -104,6 +104,7 @@ class XmlGeneratorService
         // Dirección del emisor
         $xml .= '      <cac:PostalAddress>' . "\n";
         $xml .= '        <cbc:ID schemeName="Ubigeos">' . $this->escapeXml($company->ubigeo ?? '000000') . '</cbc:ID>' . "\n";
+        $xml .= '        <cbc:AddressTypeCode listAgencyName="PE:SUNAT" listName="Establecimientos anexos">0000</cbc:AddressTypeCode>' . "\n";
         if (! empty($company->address)) {
             $xml .= '        <cbc:StreetName>' . $this->escapeXml($company->address) . '</cbc:StreetName>' . "\n";
         }
@@ -115,6 +116,9 @@ class XmlGeneratorService
         // Razón social del emisor
         $xml .= '      <cac:PartyLegalEntity>' . "\n";
         $xml .= '        <cbc:RegistrationName>' . $this->escapeXml($company->business_name) . '</cbc:RegistrationName>' . "\n";
+        $xml .= '        <cac:RegistrationAddress>' . "\n";
+        $xml .= '          <cbc:AddressTypeCode listAgencyName="PE:SUNAT" listName="Establecimientos anexos">0000</cbc:AddressTypeCode>' . "\n";
+        $xml .= '        </cac:RegistrationAddress>' . "\n";
         $xml .= '      </cac:PartyLegalEntity>' . "\n";
 
         $xml .= '    </cac:Party>' . "\n";
@@ -151,6 +155,13 @@ class XmlGeneratorService
             $xml .= '    </cac:Party>' . "\n";
             $xml .= '  </cac:AccountingCustomerParty>' . "\n";
         }
+
+        // ===== FORMA DE PAGO (Requerido por SUNAT UBL 2.1) =====
+        // Por ahora lo dejamos por defecto como CONTADO
+        $xml .= '  <cac:PaymentTerms>' . "\n";
+        $xml .= '    <cbc:ID>FormaPago</cbc:ID>' . "\n";
+        $xml .= '    <cbc:PaymentMeansID>Contado</cbc:PaymentMeansID>' . "\n";
+        $xml .= '  </cac:PaymentTerms>' . "\n";
 
         // ===== TOTALES =====
         // Total de impuestos
@@ -495,10 +506,11 @@ class XmlGeneratorService
     protected function getIdentityTypeCode(?string $identityType): string
     {
         return match ($identityType) {
-            'DNI' => '1',
-            'RUC' => '6',
-            'CE' => '4',
-            'PAS' => '7',
+            '1', 'DNI' => '1',
+            '6', 'RUC' => '6',
+            '4', 'CE' => '4',
+            '7', 'PAS' => '7',
+            '-', '0' => '0',
             default => '0', // Otros
         };
     }
