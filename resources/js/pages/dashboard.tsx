@@ -1,5 +1,4 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
-import { useTranslation } from '@/hooks/use-translation';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -58,18 +57,14 @@ const getStatusBadge = (status: string) => {
 };
 
 export default function Dashboard({ stats, recentDocuments, error }: Props) {
-    const { t } = useTranslation();
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title={t('Dashboard')} />
+            <Head title="Dashboard" />
 
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold">
-                            {t('Dashboard')}
-                        </h1>
+                        <h1 className="text-2xl font-semibold">Dashboard</h1>
                         <p className="text-muted-foreground">
                             Resumen de tu sistema de facturación
                         </p>

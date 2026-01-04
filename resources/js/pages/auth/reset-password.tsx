@@ -1,4 +1,3 @@
-import { useTranslation } from '@/hooks/use-translation';
 import { update } from '@/routes/password';
 import { Form, Head } from '@inertiajs/react';
 
@@ -15,14 +14,12 @@ interface ResetPasswordProps {
 }
 
 export default function ResetPassword({ token, email }: ResetPasswordProps) {
-    const { t } = useTranslation();
-
     return (
         <AuthLayout
-            title={t('Reset password')}
-            description={t('Please enter your new password below')}
+            title="Reset password"
+            description="Please enter your new password below"
         >
-            <Head title={t('Reset password')} />
+            <Head title="Reset password" />
 
             <Form
                 {...update.form()}
@@ -32,7 +29,7 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                 {({ processing, errors }) => (
                     <div className="grid gap-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="email">{t('Email')}</Label>
+                            <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
                                 type="email"
@@ -49,7 +46,7 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                         </div>
 
                         <div className="grid gap-2">
-                            <Label htmlFor="password">{t('Password')}</Label>
+                            <Label htmlFor="password">Password</Label>
                             <Input
                                 id="password"
                                 type="password"
@@ -57,14 +54,14 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                                 autoComplete="new-password"
                                 className="mt-1 block w-full"
                                 autoFocus
-                                placeholder={t('Password')}
+                                placeholder="Password"
                             />
                             <InputError message={errors.password} />
                         </div>
 
                         <div className="grid gap-2">
                             <Label htmlFor="password_confirmation">
-                                {t('Confirm password')}
+                                Confirm password
                             </Label>
                             <Input
                                 id="password_confirmation"
@@ -72,7 +69,7 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                                 name="password_confirmation"
                                 autoComplete="new-password"
                                 className="mt-1 block w-full"
-                                placeholder={t('Confirm password')}
+                                placeholder="Confirm password"
                             />
                             <InputError
                                 message={errors.password_confirmation}
@@ -87,7 +84,7 @@ export default function ResetPassword({ token, email }: ResetPasswordProps) {
                             data-test="reset-password-button"
                         >
                             {processing && <Spinner />}
-                            {t('Reset password')}
+                            Reset password
                         </Button>
                     </div>
                 )}
