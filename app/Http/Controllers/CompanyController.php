@@ -112,7 +112,7 @@ class CompanyController extends Controller
      */
     public function show(Company $company): Response
     {
-        $company->load(['users', 'customers', 'products', 'documents']);
+        $company->loadCount(['users', 'customers', 'products', 'documents']);
 
         return Inertia::render('Companies/Show', [
             'company' => $company,

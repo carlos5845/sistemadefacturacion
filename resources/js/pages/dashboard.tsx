@@ -1,4 +1,5 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
+import { useTranslation } from '@/hooks/use-translation';
 import { dashboard } from '@/routes';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/react';
@@ -44,24 +45,31 @@ interface Props {
 
 const getStatusBadge = (status: string) => {
     const colors: Record<string, string> = {
-        PENDING: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+        PENDING:
+            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         SENT: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-        ACCEPTED: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+        ACCEPTED:
+            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         REJECTED: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-        CANCELED: 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
+        CANCELED:
+            'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200',
     };
     return colors[status] || colors.PENDING;
 };
 
 export default function Dashboard({ stats, recentDocuments, error }: Props) {
+    const { t } = useTranslation();
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Dashboard" />
+            <Head title={t('Dashboard')} />
 
             <div className="flex h-full flex-1 flex-col gap-6 overflow-x-auto rounded-xl p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold">Dashboard</h1>
+                        <h1 className="text-2xl font-semibold">
+                            {t('Dashboard')}
+                        </h1>
                         <p className="text-muted-foreground">
                             Resumen de tu sistema de facturación
                         </p>
@@ -77,7 +85,10 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                     <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
                         <p className="font-semibold">Atención</p>
                         <p>{error}</p>
-                        <Link href="/companies/create" className="mt-2 inline-block text-sm underline">
+                        <Link
+                            href="/companies/create"
+                            className="mt-2 inline-block text-sm underline"
+                        >
                             Crear una empresa ahora
                         </Link>
                     </div>
@@ -87,8 +98,12 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                     <div className="rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Clientes</p>
-                                <p className="text-3xl font-bold">{stats.total_customers}</p>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Clientes
+                                </p>
+                                <p className="text-3xl font-bold">
+                                    {stats.total_customers}
+                                </p>
                             </div>
                             <Link href={createCustomer().url}>
                                 <Button variant="outline" size="sm">
@@ -101,8 +116,12 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                     <div className="rounded-lg border p-6">
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="text-sm font-medium text-muted-foreground">Productos</p>
-                                <p className="text-3xl font-bold">{stats.total_products}</p>
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Productos
+                                </p>
+                                <p className="text-3xl font-bold">
+                                    {stats.total_products}
+                                </p>
                             </div>
                             <Link href={createProduct().url}>
                                 <Button variant="outline" size="sm">
@@ -114,19 +133,31 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
 
                     <div className="rounded-lg border p-6">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Documentos</p>
-                            <p className="text-3xl font-bold">{stats.total_documents}</p>
+                            <p className="text-sm font-medium text-muted-foreground">
+                                Documentos
+                            </p>
+                            <p className="text-3xl font-bold">
+                                {stats.total_documents}
+                            </p>
                             <div className="mt-2 flex gap-2 text-xs">
-                                <span className="text-green-600">{stats.accepted_documents} aceptados</span>
-                                <span className="text-yellow-600">{stats.pending_documents} pendientes</span>
-                                <span className="text-red-600">{stats.rejected_documents} rechazados</span>
+                                <span className="text-green-600">
+                                    {stats.accepted_documents} aceptados
+                                </span>
+                                <span className="text-yellow-600">
+                                    {stats.pending_documents} pendientes
+                                </span>
+                                <span className="text-red-600">
+                                    {stats.rejected_documents} rechazados
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     <div className="rounded-lg border p-6">
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Ventas Totales</p>
+                            <p className="text-sm font-medium text-muted-foreground">
+                                Ventas Totales
+                            </p>
                             <p className="text-3xl font-bold">
                                 S/ {parseFloat(stats.total_sales).toFixed(2)}
                             </p>
@@ -139,7 +170,9 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
 
                 <div className="rounded-lg border p-6">
                     <div className="mb-4 flex items-center justify-between">
-                        <h2 className="text-lg font-semibold">Documentos Recientes</h2>
+                        <h2 className="text-lg font-semibold">
+                            Documentos Recientes
+                        </h2>
                         <Link href={createDocument().url}>
                             <Button variant="outline" size="sm">
                                 Ver Todos
@@ -156,32 +189,56 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b">
-                                        <th className="px-4 py-2 text-left">Tipo</th>
-                                        <th className="px-4 py-2 text-left">Serie-Número</th>
-                                        <th className="px-4 py-2 text-left">Cliente</th>
-                                        <th className="px-4 py-2 text-left">Fecha</th>
-                                        <th className="px-4 py-2 text-right">Total</th>
-                                        <th className="px-4 py-2 text-left">Estado</th>
-                                        <th className="px-4 py-2 text-right">Acciones</th>
+                                        <th className="px-4 py-2 text-left">
+                                            Tipo
+                                        </th>
+                                        <th className="px-4 py-2 text-left">
+                                            Serie-Número
+                                        </th>
+                                        <th className="px-4 py-2 text-left">
+                                            Cliente
+                                        </th>
+                                        <th className="px-4 py-2 text-left">
+                                            Fecha
+                                        </th>
+                                        <th className="px-4 py-2 text-right">
+                                            Total
+                                        </th>
+                                        <th className="px-4 py-2 text-left">
+                                            Estado
+                                        </th>
+                                        <th className="px-4 py-2 text-right">
+                                            Acciones
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {recentDocuments.map((document) => (
-                                        <tr key={document.id} className="border-b">
+                                        <tr
+                                            key={document.id}
+                                            className="border-b"
+                                        >
                                             <td className="px-4 py-2">
-                                                {document.document_type_name || document.document_type}
+                                                {document.document_type_name ||
+                                                    document.document_type}
                                             </td>
                                             <td className="px-4 py-2 font-medium">
-                                                {document.series}-{document.number}
+                                                {document.series}-
+                                                {document.number}
                                             </td>
                                             <td className="px-4 py-2">
                                                 {document.customer?.name || '-'}
                                             </td>
                                             <td className="px-4 py-2">
-                                                {new Date(document.issue_date).toLocaleDateString('es-PE')}
+                                                {new Date(
+                                                    document.issue_date,
+                                                ).toLocaleDateString('es-PE')}
                                             </td>
                                             <td className="px-4 py-2 text-right">
-                                                S/ {parseFloat(document.total).toFixed(2)}
+                                                S/{' '}
+                                                {parseFloat(
+                                                    document.total,
+                                                ).toFixed(2)}
                                             </td>
                                             <td className="px-4 py-2">
                                                 <span
@@ -192,7 +249,9 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                                             </td>
                                             <td className="px-4 py-2 text-right">
                                                 <Link
-                                                    href={DocumentController.show.url(document.id)}
+                                                    href={DocumentController.show.url(
+                                                        document.id,
+                                                    )}
                                                     className="text-primary hover:underline"
                                                 >
                                                     Ver

@@ -37,6 +37,7 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         [$message, $author] = str(Inspiring::quotes()->random())->explode('-');
+        $locale = config('app.locale');
 
         return [
             ...parent::share($request),
@@ -50,6 +51,8 @@ class HandleInertiaRequests extends Middleware
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),
             ],
+            'locale' => $locale,
+            'translations' => json_decode(file_get_contents(lang_path("{$locale}.json")), true) ?? [],
         ];
     }
 }

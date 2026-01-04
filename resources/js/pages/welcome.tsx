@@ -1,3 +1,4 @@
+import { useTranslation } from '@/hooks/use-translation';
 import { dashboard, login, register } from '@/routes';
 import { type SharedData } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/react';
@@ -8,10 +9,11 @@ export default function Welcome({
     canRegister?: boolean;
 }) {
     const { auth } = usePage<SharedData>().props;
+    const { t } = useTranslation();
 
     return (
         <>
-            <Head title="Welcome">
+            <Head title={t('Welcome')}>
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
                     href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
@@ -26,7 +28,7 @@ export default function Welcome({
                                 href={dashboard()}
                                 className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                             >
-                                Dashboard
+                                {t('Dashboard')}
                             </Link>
                         ) : (
                             <>
@@ -34,14 +36,14 @@ export default function Welcome({
                                     href={login()}
                                     className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035] dark:text-[#EDEDEC] dark:hover:border-[#3E3E3A]"
                                 >
-                                    Log in
+                                    {t('Log in')}
                                 </Link>
                                 {canRegister && (
                                     <Link
                                         href={register()}
                                         className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a] dark:border-[#3E3E3A] dark:text-[#EDEDEC] dark:hover:border-[#62605b]"
                                     >
-                                        Register
+                                        {t('Register')}
                                     </Link>
                                 )}
                             </>
@@ -52,12 +54,12 @@ export default function Welcome({
                     <main className="flex w-full max-w-[335px] flex-col-reverse lg:max-w-4xl lg:flex-row">
                         <div className="flex-1 rounded-br-lg rounded-bl-lg bg-white p-6 pb-12 text-[13px] leading-[20px] shadow-[inset_0px_0px_0px_1px_rgba(26,26,0,0.16)] lg:rounded-tl-lg lg:rounded-br-none lg:p-20 dark:bg-[#161615] dark:text-[#EDEDEC] dark:shadow-[inset_0px_0px_0px_1px_#fffaed2d]">
                             <h1 className="mb-1 font-medium">
-                                Let's get started
+                                {t("Let's get started")}
                             </h1>
                             <p className="mb-2 text-[#706f6c] dark:text-[#A1A09A]">
-                                Laravel has an incredibly rich ecosystem.
+                                {t('Laravel has an incredibly rich ecosystem.')}
                                 <br />
-                                We suggest starting with the following.
+                                {t('We suggest starting with the following.')}
                             </p>
                             <ul className="mb-4 flex flex-col lg:mb-6">
                                 <li className="relative flex items-center gap-4 py-2 before:absolute before:top-1/2 before:bottom-0 before:left-[0.4rem] before:border-l before:border-[#e3e3e0] dark:before:border-[#3E3E3A]">
@@ -67,7 +69,7 @@ export default function Welcome({
                                         </span>
                                     </span>
                                     <span>
-                                        Read the
+                                        {t('Read the')}
                                         <a
                                             href="https://laravel.com/docs"
                                             target="_blank"
@@ -98,7 +100,7 @@ export default function Welcome({
                                         </span>
                                     </span>
                                     <span>
-                                        Watch video tutorials at
+                                        {t('Watch video tutorials at')}
                                         <a
                                             href="https://laracasts.com"
                                             target="_blank"
@@ -130,7 +132,7 @@ export default function Welcome({
                                         target="_blank"
                                         className="inline-block rounded-sm border border-black bg-[#1b1b18] px-5 py-1.5 text-sm leading-normal text-white hover:border-black hover:bg-black dark:border-[#eeeeec] dark:bg-[#eeeeec] dark:text-[#1C1C1A] dark:hover:border-white dark:hover:bg-white"
                                     >
-                                        Deploy now
+                                        {t('Deploy now')}
                                     </a>
                                 </li>
                             </ul>

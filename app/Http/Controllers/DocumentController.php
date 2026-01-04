@@ -135,10 +135,16 @@ class DocumentController extends Controller
             ->orderBy('name')
             ->get();
 
+        $products = \App\Models\Product::where('company_id', $companyId)
+            ->where('active', true)
+            ->orderBy('name')
+            ->get();
+
         $documentTypes = CatalogDocumentType::orderBy('name')->get();
 
         return Inertia::render('Documents/Create', [
             'customers' => $customers,
+            'products' => $products,
             'documentTypes' => $documentTypes,
         ]);
     }
@@ -234,6 +240,33 @@ class DocumentController extends Controller
 
         return Inertia::render('Documents/Show', [
             'document' => $documentData,
+        ]);
+    }
+
+    /**
+     * Render the print view for the document.
+     */
+    public function print(Request $request, Document $document)
+    {
+        $user = $request->user();
+
+        // Verificar autorización
+        if ($user->company_id !== $document->company_id && ! $user->hasRole('super-admin')) {
+            abort(403, 'No tienes permiso para imprimir este documento.');
+        }
+
+        $document->load([
+            'company',
+            'customer',
+            'documentType',
+            'items.product',
+            'items.taxType',
+            'payments', // If you have payments relation
+        ]);
+
+        return view('documents.print', [
+            'document' => $document,
+            'company' => $document->company,
         ]);
     }
 

@@ -15,6 +15,12 @@ import { index } from '@/routes/documents';
 interface Props {
     customers?: Array<{ id: number; name: string }>;
     documentTypes?: Array<{ code: string; name: string }>;
+    products?: Array<{
+        id: number;
+        name: string;
+        sale_price: number;
+        tax_type: string;
+    }>;
     error?: string;
 }
 
@@ -42,6 +48,7 @@ interface DocumentItem {
 export default function DocumentsCreate({
     customers = [],
     documentTypes = [],
+    products = [],
     error: propError,
 }: Props) {
     const { flash } = usePage().props as {
@@ -117,6 +124,29 @@ export default function DocumentsCreate({
         }
 
         setItems(newItems);
+    };
+
+    const handleProductChange = (index: number, productId: string) => {
+        const product = products.find((p) => p.id === parseInt(productId));
+        if (product) {
+            const newItems = [...items];
+            newItems[index] = {
+                ...newItems[index],
+                product_id: product.id,
+                description: product.name,
+                unit_price: product.sale_price,
+                tax_type: product.tax_type || '10', // Default to 10 if not set
+            };
+
+            const calculated = calculateItemTotal(newItems[index]);
+            newItems[index].total = calculated.total;
+            newItems[index].igv = calculated.igv;
+            setItems(newItems);
+        } else if (productId === '') {
+            const newItems = [...items];
+            newItems[index].product_id = null;
+            setItems(newItems);
+        }
     };
 
     const addItem = () => {
@@ -219,7 +249,7 @@ export default function DocumentsCreate({
                                     <select
                                         id="document_type"
                                         name="document_type"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base text-black shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:text-white"
                                         required
                                         aria-invalid={
                                             errors.document_type
@@ -227,13 +257,17 @@ export default function DocumentsCreate({
                                                 : undefined
                                         }
                                     >
-                                        <option value="">
+                                        <option
+                                            value=""
+                                            className="bg-white text-black"
+                                        >
                                             Seleccione un tipo
                                         </option>
                                         {documentTypes.map((type) => (
                                             <option
                                                 key={type.code}
                                                 value={type.code}
+                                                className="bg-white text-black"
                                             >
                                                 {type.name}
                                             </option>
@@ -249,13 +283,19 @@ export default function DocumentsCreate({
                                     <select
                                         id="customer_id"
                                         name="customer_id"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base text-black shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:text-white"
                                     >
-                                        <option value="">Sin cliente</option>
+                                        <option
+                                            value=""
+                                            className="bg-white text-black"
+                                        >
+                                            Sin cliente
+                                        </option>
                                         {customers.map((customer) => (
                                             <option
                                                 key={customer.id}
                                                 value={customer.id}
+                                                className="bg-white text-black"
                                             >
                                                 {customer.name}
                                             </option>
@@ -322,12 +362,20 @@ export default function DocumentsCreate({
                                     <select
                                         id="currency"
                                         name="currency"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base text-black shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:text-white"
                                         required
                                         defaultValue="PEN"
                                     >
-                                        <option value="PEN">Soles (PEN)</option>
-                                        <option value="USD">
+                                        <option
+                                            value="PEN"
+                                            className="bg-white text-black"
+                                        >
+                                            Soles (PEN)
+                                        </option>
+                                        <option
+                                            value="USD"
+                                            className="bg-white text-black"
+                                        >
                                             Dólares (USD)
                                         </option>
                                     </select>
@@ -353,9 +401,40 @@ export default function DocumentsCreate({
                                     {items.map((item, index) => (
                                         <div
                                             key={index}
-                                            className="grid gap-4 rounded-md border p-4 md:grid-cols-6"
+                                            className="grid gap-4 rounded-md border p-4 md:grid-cols-12"
                                         >
-                                            <div className="grid gap-2 md:col-span-2">
+                                            <div className="grid gap-2 md:col-span-3">
+                                                <Label>Producto</Label>
+                                                <select
+                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-black shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 dark:text-white"
+                                                    onChange={(e) =>
+                                                        handleProductChange(
+                                                            index,
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    value={
+                                                        item.product_id || ''
+                                                    }
+                                                >
+                                                    <option
+                                                        value=""
+                                                        className="bg-white text-sm text-black"
+                                                    >
+                                                        Seleccione...
+                                                    </option>
+                                                    {products.map((product) => (
+                                                        <option
+                                                            key={product.id}
+                                                            value={product.id}
+                                                            className="bg-white text-sm text-black"
+                                                        >
+                                                            {product.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="grid gap-2 md:col-span-4">
                                                 <Label>Descripción *</Label>
                                                 <Input
                                                     name={`items[${index}][description]`}
@@ -371,7 +450,7 @@ export default function DocumentsCreate({
                                                     required
                                                 />
                                             </div>
-                                            <div className="grid gap-2">
+                                            <div className="grid gap-2 md:col-span-2">
                                                 <Label>Cantidad *</Label>
                                                 <Input
                                                     name={`items[${index}][quantity]`}
@@ -391,7 +470,7 @@ export default function DocumentsCreate({
                                                     required
                                                 />
                                             </div>
-                                            <div className="grid gap-2">
+                                            <div className="grid gap-2 md:col-span-3">
                                                 <Label>Precio Unit. *</Label>
                                                 <Input
                                                     name={`items[${index}][unit_price]`}
@@ -413,11 +492,11 @@ export default function DocumentsCreate({
                                                     required
                                                 />
                                             </div>
-                                            <div className="grid gap-2">
+                                            <div className="grid gap-2 md:col-span-3">
                                                 <Label>Tipo Impuesto *</Label>
                                                 <select
                                                     name={`items[${index}][tax_type]`}
-                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                                                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm text-black dark:text-white"
                                                     value={item.tax_type}
                                                     onChange={(e) =>
                                                         updateItem(
@@ -428,16 +507,28 @@ export default function DocumentsCreate({
                                                     }
                                                     required
                                                 >
-                                                    <option value="10">
+                                                    <option
+                                                        value="10"
+                                                        className="bg-white text-black"
+                                                    >
                                                         Gravado 18%
                                                     </option>
-                                                    <option value="20">
+                                                    <option
+                                                        value="20"
+                                                        className="bg-white text-black"
+                                                    >
                                                         Exonerado
                                                     </option>
-                                                    <option value="30">
+                                                    <option
+                                                        value="30"
+                                                        className="bg-white text-black"
+                                                    >
                                                         Inafecto
                                                     </option>
-                                                    <option value="40">
+                                                    <option
+                                                        value="40"
+                                                        className="bg-white text-black"
+                                                    >
                                                         Exportación
                                                     </option>
                                                 </select>
@@ -457,7 +548,7 @@ export default function DocumentsCreate({
                                                 name={`items[${index}][igv]`}
                                                 value={item.igv.toFixed(2)}
                                             />
-                                            <div className="grid gap-2 md:col-span-6">
+                                            <div className="grid gap-2 md:col-span-9">
                                                 <div className="flex items-center justify-between">
                                                     <div>
                                                         <span className="text-sm text-muted-foreground">

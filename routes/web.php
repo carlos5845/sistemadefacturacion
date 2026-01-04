@@ -40,6 +40,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
             ->name('documents.send-to-sunat');
 
+        // Print route
+        Route::get('documents/{document}/print', [DocumentController::class, 'print'])
+            ->name('documents.print');
+
         // XML download and view routes
         Route::get('documents/{document}/xml/download', [DocumentController::class, 'downloadXml'])
             ->name('documents.xml.download');
