@@ -45,4 +45,9 @@ return [
         'retry_delay' => env('SUNAT_RETRY_DELAY', 5),
     ],
 
+    'apis_net_pe' => [
+        'token' => env('APIS_NET_PE_TOKEN'),
+        'base_url' => env('APIS_NET_PE_URL', 'https://api.decolecta.com'),
+    ],
+
 ];

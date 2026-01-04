@@ -1,9 +1,11 @@
 import CustomerController from '@/actions/App/Http/Controllers/CustomerController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { ErrorModal } from '@/components/error-modal';
+import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,17 +15,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
-import { SuccessModal } from '@/components/success-modal';
-import { ErrorModal } from '@/components/error-modal';
 import AppLayout from '@/layouts/app-layout';
-import { index, create } from '@/routes/customers';
+import { create, index } from '@/routes/customers';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -57,9 +57,13 @@ interface Props {
 export default function CustomersIndex({ customers, filters, error }: Props) {
     const [search, setSearch] = useState(filters.search || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(null);
+    const [customerToDelete, setCustomerToDelete] = useState<Customer | null>(
+        null,
+    );
     const [isDeleting, setIsDeleting] = useState(false);
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+    const { flash } = usePage().props as {
+        flash?: { success?: string; error?: string };
+    };
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
@@ -77,6 +81,14 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
             setShowErrorModal(true);
         }
     }, [flash]);
+
+    const getIdentityTypeLabel = (type: string) => {
+        if (type === '1' || type === 'DNI') return 'DNI';
+        if (type === '6' || type === 'RUC') return 'RUC';
+        if (type === '4' || type === 'CE') return 'CE';
+        if (type === '7' || type === 'PAS') return 'PAS';
+        return type;
+    };
 
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,7 +117,10 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
             },
             onError: (errors) => {
                 setIsDeleting(false);
-                const errorMsg = typeof errors === 'string' ? errors : 'Error al eliminar el cliente.';
+                const errorMsg =
+                    typeof errors === 'string'
+                        ? errors
+                        : 'Error al eliminar el cliente.';
                 setErrorMessage(errorMsg);
                 setShowErrorModal(true);
             },
@@ -154,39 +169,64 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                         <thead>
                             <tr className="border-b">
                                 <th className="px-4 py-3 text-left">Tipo</th>
-                                <th className="px-4 py-3 text-left">Documento</th>
+                                <th className="px-4 py-3 text-left">
+                                    Documento
+                                </th>
                                 <th className="px-4 py-3 text-left">Nombre</th>
                                 <th className="px-4 py-3 text-left">Email</th>
-                                <th className="px-4 py-3 text-left">Teléfono</th>
-                                <th className="px-4 py-3 text-right">Acciones</th>
+                                <th className="px-4 py-3 text-left">
+                                    Teléfono
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    Acciones
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {customers.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                                    <td
+                                        colSpan={6}
+                                        className="px-4 py-8 text-center text-muted-foreground"
+                                    >
                                         No hay clientes registrados
                                     </td>
                                 </tr>
                             ) : (
                                 customers.data.map((customer) => (
                                     <tr key={customer.id} className="border-b">
-                                        <td className="px-4 py-3">{customer.identity_type}</td>
-                                        <td className="px-4 py-3">{customer.identity_number}</td>
-                                        <td className="px-4 py-3">{customer.name}</td>
-                                        <td className="px-4 py-3">{customer.email || '-'}</td>
-                                        <td className="px-4 py-3">{customer.phone || '-'}</td>
+                                        <td className="px-4 py-3">
+                                            {getIdentityTypeLabel(
+                                                customer.identity_type,
+                                            )}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {customer.identity_number}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {customer.name}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {customer.email || '-'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {customer.phone || '-'}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-end gap-2">
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Link
-                                                                href={CustomerController.show.url(customer.id)}
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                href={CustomerController.show.url(
+                                                                    customer.id,
+                                                                )}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                                             >
                                                                 <Eye className="h-4 w-4" />
-                                                                <span className="sr-only">Ver cliente</span>
+                                                                <span className="sr-only">
+                                                                    Ver cliente
+                                                                </span>
                                                             </Link>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
@@ -198,16 +238,25 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <button
-                                                                onClick={() => handleDeleteClick(customer)}
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+                                                                onClick={() =>
+                                                                    handleDeleteClick(
+                                                                        customer,
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
                                                                 type="button"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
-                                                                <span className="sr-only">Eliminar cliente</span>
+                                                                <span className="sr-only">
+                                                                    Eliminar
+                                                                    cliente
+                                                                </span>
                                                             </button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Eliminar cliente</p>
+                                                            <p>
+                                                                Eliminar cliente
+                                                            </p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
@@ -221,7 +270,10 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                 </div>
 
                 {/* Modal de confirmación de eliminación */}
-                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <Dialog
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>¿Eliminar cliente?</DialogTitle>
@@ -275,4 +327,3 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
         </AppLayout>
     );
 }
-

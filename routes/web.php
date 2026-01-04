@@ -49,6 +49,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('documents.xml.view');
         Route::get('documents/{document}/xml-signed/view', [DocumentController::class, 'viewXmlSigned'])
             ->name('documents.xml-signed.view');
+
+        // Consultas DNI/RUC
+        Route::get('consult/dni/{dni}', [App\Http\Controllers\ConsultController::class, 'dni'])->name('consult.dni');
+        Route::get('consult/ruc/{ruc}', [App\Http\Controllers\ConsultController::class, 'ruc'])->name('consult.ruc');
 });
 
 require __DIR__ . '/settings.php';
