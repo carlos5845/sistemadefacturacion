@@ -1,17 +1,17 @@
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { type BreadcrumbItem } from '@/types';
-import { Form, Head, Link, usePage, router } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
+import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { useEffect, useState } from 'react';
 
+import { AddCategoryModal } from '@/components/add-category-modal';
+import { ErrorModal } from '@/components/error-modal';
 import InputError from '@/components/input-error';
+import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/app-layout';
 import { index } from '@/routes/products';
-import { SuccessModal } from '@/components/success-modal';
-import { ErrorModal } from '@/components/error-modal';
-import { AddCategoryModal } from '@/components/add-category-modal';
 
 interface Product {
     id: number;
@@ -48,8 +48,15 @@ const breadcrumbs = (product: Product): BreadcrumbItem[] => [
     },
 ];
 
-export default function ProductsEdit({ product, categories, units, taxTypes }: Props) {
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+export default function ProductsEdit({
+    product,
+    categories,
+    units,
+    taxTypes,
+}: Props) {
+    const { flash } = usePage().props as {
+        flash?: { success?: string; error?: string };
+    };
     const successMessage = flash?.success || '';
     const errorMessage = flash?.error || '';
     const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -120,6 +127,7 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                     options={{
                         preserveScroll: true,
                     }}
+                    // @ts-ignore
                     defaults={{
                         name: product.name,
                         description: product.description || '',
@@ -136,39 +144,53 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                         <>
                             <div className="grid gap-6 md:grid-cols-2">
                                 <div className="grid gap-2 md:col-span-2">
-                                    <Label htmlFor="name">Nombre del Producto *</Label>
+                                    <Label htmlFor="name">
+                                        Nombre del Producto *
+                                    </Label>
                                     <Input
                                         id="name"
                                         name="name"
                                         type="text"
                                         required
                                         defaultValue={product.name}
-                                        aria-invalid={errors.name ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.name ? 'true' : undefined
+                                        }
                                     />
                                     <InputError message={errors.name} />
                                 </div>
 
                                 <div className="grid gap-2 md:col-span-2">
-                                    <Label htmlFor="description">Descripción</Label>
+                                    <Label htmlFor="description">
+                                        Descripción
+                                    </Label>
                                     <textarea
                                         id="description"
                                         name="description"
                                         rows={3}
-                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                                        className="flex min-h-[60px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
                                         defaultValue={product.description || ''}
-                                        aria-invalid={errors.description ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.description
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     />
                                     <InputError message={errors.description} />
                                 </div>
 
                                 <div className="grid gap-2">
                                     <div className="flex items-center justify-between">
-                                        <Label htmlFor="category_id">Categoría</Label>
+                                        <Label htmlFor="category_id">
+                                            Categoría
+                                        </Label>
                                         <Button
                                             type="button"
                                             variant="outline"
                                             size="sm"
-                                            onClick={() => setShowCategoryModal(true)}
+                                            onClick={() =>
+                                                setShowCategoryModal(true)
+                                            }
                                             className="h-7 text-xs"
                                         >
                                             + Agregar
@@ -177,13 +199,20 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                     <select
                                         id="category_id"
                                         name="category_id"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                         defaultValue={product.category_id || ''}
-                                        aria-invalid={errors.category_id ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.category_id
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     >
                                         <option value="">Sin categoría</option>
                                         {categoriesList.map((category) => (
-                                            <option key={category.id} value={category.id}>
+                                            <option
+                                                key={category.id}
+                                                value={category.id}
+                                            >
                                                 {category.name}
                                             </option>
                                         ))}
@@ -192,18 +221,29 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="unit_type">Unidad de Medida *</Label>
+                                    <Label htmlFor="unit_type">
+                                        Unidad de Medida *
+                                    </Label>
                                     <select
                                         id="unit_type"
                                         name="unit_type"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                         required
                                         defaultValue={product.unit_type}
-                                        aria-invalid={errors.unit_type ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.unit_type
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     >
-                                        <option value="">Seleccione una unidad</option>
+                                        <option value="">
+                                            Seleccione una unidad
+                                        </option>
                                         {units.map((unit) => (
-                                            <option key={unit.code} value={unit.code}>
+                                            <option
+                                                key={unit.code}
+                                                value={unit.code}
+                                            >
                                                 {unit.name} ({unit.code})
                                             </option>
                                         ))}
@@ -212,7 +252,9 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="sale_price">Precio de Venta *</Label>
+                                    <Label htmlFor="sale_price">
+                                        Precio de Venta *
+                                    </Label>
                                     <Input
                                         id="sale_price"
                                         name="sale_price"
@@ -221,38 +263,61 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                         min="0"
                                         required
                                         defaultValue={product.sale_price}
-                                        aria-invalid={errors.sale_price ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.sale_price
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     />
                                     <InputError message={errors.sale_price} />
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="purchase_price">Precio de Compra</Label>
+                                    <Label htmlFor="purchase_price">
+                                        Precio de Compra
+                                    </Label>
                                     <Input
                                         id="purchase_price"
                                         name="purchase_price"
                                         type="number"
                                         step="0.01"
                                         min="0"
-                                        defaultValue={product.purchase_price || ''}
-                                        aria-invalid={errors.purchase_price ? 'true' : undefined}
+                                        defaultValue={
+                                            product.purchase_price || ''
+                                        }
+                                        aria-invalid={
+                                            errors.purchase_price
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     />
-                                    <InputError message={errors.purchase_price} />
+                                    <InputError
+                                        message={errors.purchase_price}
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="tax_type">Tipo de Impuesto *</Label>
+                                    <Label htmlFor="tax_type">
+                                        Tipo de Impuesto *
+                                    </Label>
                                     <select
                                         id="tax_type"
                                         name="tax_type"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                         required
                                         defaultValue={product.tax_type}
-                                        aria-invalid={errors.tax_type ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.tax_type ? 'true' : undefined
+                                        }
                                     >
-                                        <option value="">Seleccione un tipo</option>
+                                        <option value="">
+                                            Seleccione un tipo
+                                        </option>
                                         {taxTypes.map((taxType) => (
-                                            <option key={taxType.code} value={taxType.code}>
+                                            <option
+                                                key={taxType.code}
+                                                value={taxType.code}
+                                            >
                                                 {taxType.name}
                                             </option>
                                         ))}
@@ -265,8 +330,10 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                     <select
                                         id="has_igv"
                                         name="has_igv"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
-                                        defaultValue={product.has_igv ? '1' : '0'}
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                                        defaultValue={
+                                            product.has_igv ? '1' : '0'
+                                        }
                                     >
                                         <option value="0">No</option>
                                         <option value="1">Sí</option>
@@ -278,8 +345,10 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
                                     <select
                                         id="active"
                                         name="active"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
-                                        defaultValue={product.active ? '1' : '0'}
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+                                        defaultValue={
+                                            product.active ? '1' : '0'
+                                        }
                                     >
                                         <option value="1">Activo</option>
                                         <option value="0">Inactivo</option>
@@ -289,9 +358,15 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
 
                             <div className="flex items-center gap-4">
                                 <Button type="submit" disabled={processing}>
-                                    {processing ? 'Guardando...' : 'Guardar Cambios'}
+                                    {processing
+                                        ? 'Guardando...'
+                                        : 'Guardar Cambios'}
                                 </Button>
-                                <Link href={ProductController.show.url(product.id)}>
+                                <Link
+                                    href={ProductController.show.url(
+                                        product.id,
+                                    )}
+                                >
                                     <Button type="button" variant="outline">
                                         Cancelar
                                     </Button>
@@ -304,6 +379,3 @@ export default function ProductsEdit({ product, categories, units, taxTypes }: P
         </AppLayout>
     );
 }
-
-
-

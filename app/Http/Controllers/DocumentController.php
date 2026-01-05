@@ -40,7 +40,7 @@ class DocumentController extends Controller
                 })
                 ->with(['customer', 'documentType', 'company'])
                 ->latest('issue_date')
-                ->paginate(15);
+                ->paginate(12);
 
             // Transformar documentos para incluir solo el nombre del tipo
             $documents->getCollection()->transform(function ($document) {
@@ -51,7 +51,7 @@ class DocumentController extends Controller
                 return $document;
             });
 
-            $documentTypes = CatalogDocumentType::orderBy('name')->get();
+            $documentTypes = CatalogDocumentType::whereIn('code', ['01', '03'])->orderBy('name')->get();
 
             return Inertia::render('Documents/Index', [
                 'documents' => $documents,
@@ -84,7 +84,7 @@ class DocumentController extends Controller
             })
             ->with(['customer', 'documentType'])
             ->latest('issue_date')
-            ->paginate(15);
+            ->paginate(12);
 
         // Transformar documentos para incluir solo el nombre del tipo
         $documents->getCollection()->transform(function ($document) {
@@ -95,7 +95,7 @@ class DocumentController extends Controller
             return $document;
         });
 
-        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+        $documentTypes = CatalogDocumentType::whereIn('code', ['01', '03'])->orderBy('name')->get();
 
         return Inertia::render('Documents/Index', [
             'documents' => $documents,
@@ -140,12 +140,13 @@ class DocumentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+        $documentTypes = CatalogDocumentType::whereIn('code', ['01', '03'])->orderBy('name')->get();
 
         return Inertia::render('Documents/Create', [
             'customers' => $customers,
             'products' => $products,
             'documentTypes' => $documentTypes,
+            'products' => $products,
         ]);
     }
 
@@ -244,9 +245,9 @@ class DocumentController extends Controller
     }
 
     /**
-     * Render the print view for the document.
+     * Print the specified resource.
      */
-    public function print(Request $request, Document $document)
+    public function print(Request $request, Document $document): Response
     {
         $user = $request->user();
 
@@ -261,15 +262,23 @@ class DocumentController extends Controller
             'documentType',
             'items.product',
             'items.taxType',
-            'payments', // If you have payments relation
+            'payments',
+            'taxes.taxType',
+            'sunatResponse',
         ]);
 
-        return view('documents.print', [
-            'document' => $document,
-            'company' => $document->company,
+        // Preparar datos para Inertia
+        $documentData = $document->toArray();
+        if ($document->documentType) {
+            $documentData['document_type_obj'] = [
+                'name' => $document->documentType->name,
+            ];
+        }
+
+        return Inertia::render('Documents/Print', [
+            'document' => $documentData,
         ]);
     }
-
     /**
      * Download XML file (original).
      */
@@ -397,7 +406,7 @@ class DocumentController extends Controller
             ->orderBy('name')
             ->get();
 
-        $documentTypes = CatalogDocumentType::orderBy('name')->get();
+        $documentTypes = CatalogDocumentType::whereIn('code', ['01', '03'])->orderBy('name')->get();
 
         return Inertia::render('Documents/Edit', [
             'document' => $document,
@@ -508,5 +517,57 @@ class DocumentController extends Controller
             return redirect()->route('documents.show', $document)
                 ->with('error', 'Error al enviar el documento a SUNAT: ' . $e->getMessage());
         }
+    }
+    /**
+     * Get the next series and number for a document type.
+     */
+    public function getNextSeriesNumber(Request $request)
+    {
+        $user = $request->user();
+        if (! $user || ! $user->company_id) {
+            return response()->json(['error' => 'Usuario no asociado a una empresa'], 400);
+        }
+
+        $companyId = $user->company_id;
+        $documentType = $request->input('document_type');
+        $series = $request->input('series');
+
+        if (! $documentType) {
+            return response()->json(['error' => 'Tipo de documento requerido'], 400);
+        }
+
+        // Si no se proporcionó serie, buscar la última usada o sugerir una por defecto
+        if (! $series) {
+            $lastDocument = Document::where('company_id', $companyId)
+                ->where('document_type', $documentType)
+                ->latest('id')
+                ->first();
+
+            if ($lastDocument) {
+                $series = $lastDocument->series;
+            } else {
+                // Series por defecto según tipo
+                $series = match ($documentType) {
+                    '01' => 'F001', // Factura
+                    '03' => 'B001', // Boleta
+                    '07' => 'FC01', // Nota de Crédito (asumiendo ref a factura por defecto)
+                    '08' => 'FD01', // Nota de Débito
+                    default => '0001',
+                };
+            }
+        }
+
+        // Buscar el último número para esa serie
+        $lastNumber = Document::where('company_id', $companyId)
+            ->where('document_type', $documentType)
+            ->where('series', $series)
+            ->max('number');
+
+        $nextNumber = ($lastNumber ?? 0) + 1;
+
+        return response()->json([
+            'series' => $series,
+            'number' => $nextNumber,
+        ]);
     }
 }

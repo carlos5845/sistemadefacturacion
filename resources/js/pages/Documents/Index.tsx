@@ -1,10 +1,11 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Eye, Trash2 } from 'lucide-react';
+import { Eye, Printer, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ErrorModal } from '@/components/error-modal';
+import Pagination from '@/components/pagination';
 import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
 import {
@@ -198,7 +199,7 @@ export default function DocumentsIndex({
                     <select
                         value={documentType}
                         onChange={(e) => setDocumentType(e.target.value)}
-                        className="rounded-md border px-3 py-2"
+                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                     >
                         <option value="">Todos los tipos</option>
                         {documentTypes.map((type) => (
@@ -210,7 +211,7 @@ export default function DocumentsIndex({
                     <select
                         value={status}
                         onChange={(e) => setStatus(e.target.value)}
-                        className="rounded-md border px-3 py-2"
+                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                     >
                         <option value="">Todos los estados</option>
                         <option value="PENDING">Pendiente</option>
@@ -286,9 +287,35 @@ export default function DocumentsIndex({
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Link
+<<<<<<< HEAD
                                                                 href={DocumentController.show.url(
                                                                     document.id,
                                                                 )}
+=======
+                                                                href={`/documents/${document.id}/print`}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
+                                                            >
+                                                                <Printer className="h-4 w-4" />
+                                                                <span className="sr-only">
+                                                                    Imprimir
+                                                                </span>
+                                                            </Link>
+                                                        </TooltipTrigger>
+                                                        <TooltipContent>
+                                                            <p>
+                                                                Imprimir
+                                                                documento
+                                                            </p>
+                                                        </TooltipContent>
+                                                    </Tooltip>
+                                                </TooltipProvider>
+
+                                                <TooltipProvider>
+                                                    <Tooltip>
+                                                        <TooltipTrigger asChild>
+                                                            <Link
+                                                                href={`/documents/${document.id}`}
+>>>>>>> reniec
                                                                 className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                                             >
                                                                 <Eye className="h-4 w-4" />
@@ -382,6 +409,7 @@ export default function DocumentsIndex({
                         </tbody>
                     </table>
                 </div>
+                <Pagination links={documents.links} meta={documents.meta} />
 
                 {/* Modal de confirmación de eliminación */}
                 <Dialog

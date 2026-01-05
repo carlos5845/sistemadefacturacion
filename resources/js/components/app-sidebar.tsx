@@ -47,6 +47,7 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+const footerNavItems: NavItem[] = [];
 export function AppSidebar() {
     return (
         <Sidebar collapsible="icon" variant="inset">

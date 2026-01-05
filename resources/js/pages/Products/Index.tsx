@@ -1,9 +1,12 @@
 import ProductController from '@/actions/App/Http/Controllers/ProductController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { useState, useEffect } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { ErrorModal } from '@/components/error-modal';
+import Pagination from '@/components/pagination';
+import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -13,17 +16,15 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Input } from '@/components/ui/input';
-import { SuccessModal } from '@/components/success-modal';
-import { ErrorModal } from '@/components/error-modal';
 import AppLayout from '@/layouts/app-layout';
-import { index, create } from '@/routes/products';
+import { create, index } from '@/routes/products';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -59,14 +60,25 @@ interface Props {
     error?: string;
 }
 
-export default function ProductsIndex({ products, categories, filters, error }: Props) {
+export default function ProductsIndex({
+    products,
+    categories,
+    filters,
+    error,
+}: Props) {
     const [search, setSearch] = useState(filters.search || '');
-    const [categoryId, setCategoryId] = useState(filters.category_id?.toString() || '');
+    const [categoryId, setCategoryId] = useState(
+        filters.category_id?.toString() || '',
+    );
     const [active, setActive] = useState(filters.active?.toString() || '');
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-    const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+    const [productToDelete, setProductToDelete] = useState<Product | null>(
+        null,
+    );
     const [isDeleting, setIsDeleting] = useState(false);
-    const { flash } = usePage().props as { flash?: { success?: string; error?: string } };
+    const { flash } = usePage().props as {
+        flash?: { success?: string; error?: string };
+    };
 
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showErrorModal, setShowErrorModal] = useState(false);
@@ -87,11 +99,15 @@ export default function ProductsIndex({ products, categories, filters, error }: 
 
     const handleFilter = (e: React.FormEvent) => {
         e.preventDefault();
-        router.get(index().url, {
-            search,
-            category_id: categoryId || undefined,
-            active: active !== '' ? active === 'true' : undefined,
-        }, { preserveState: true });
+        router.get(
+            index().url,
+            {
+                search,
+                category_id: categoryId || undefined,
+                active: active !== '' ? active === 'true' : undefined,
+            },
+            { preserveState: true },
+        );
     };
 
     const handleDeleteClick = (product: Product) => {
@@ -116,7 +132,10 @@ export default function ProductsIndex({ products, categories, filters, error }: 
             },
             onError: (errors) => {
                 setIsDeleting(false);
-                const errorMsg = typeof errors === 'string' ? errors : 'Error al eliminar el producto.';
+                const errorMsg =
+                    typeof errors === 'string'
+                        ? errors
+                        : 'Error al eliminar el producto.';
                 setErrorMessage(errorMsg);
                 setShowErrorModal(true);
             },
@@ -160,11 +179,14 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                     <select
                         value={categoryId}
                         onChange={(e) => setCategoryId(e.target.value)}
-                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                     >
                         <option value="">Todas las categorías</option>
                         {categories.map((category) => (
-                            <option key={category.id} value={category.id.toString()}>
+                            <option
+                                key={category.id}
+                                value={category.id.toString()}
+                            >
                                 {category.name}
                             </option>
                         ))}
@@ -172,7 +194,7 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                     <select
                         value={active}
                         onChange={(e) => setActive(e.target.value)}
-                        className="flex h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm"
+                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                     >
                         <option value="">Todos</option>
                         <option value="true">Activos</option>
@@ -186,28 +208,46 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                         <thead>
                             <tr className="border-b">
                                 <th className="px-4 py-3 text-left">Nombre</th>
-                                <th className="px-4 py-3 text-left">Categoría</th>
+                                <th className="px-4 py-3 text-left">
+                                    Categoría
+                                </th>
                                 <th className="px-4 py-3 text-left">Unidad</th>
-                                <th className="px-4 py-3 text-right">Precio Venta</th>
+                                <th className="px-4 py-3 text-right">
+                                    Precio Venta
+                                </th>
                                 <th className="px-4 py-3 text-left">Estado</th>
-                                <th className="px-4 py-3 text-right">Acciones</th>
+                                <th className="px-4 py-3 text-right">
+                                    Acciones
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {products.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                                    <td
+                                        colSpan={6}
+                                        className="px-4 py-8 text-center text-muted-foreground"
+                                    >
                                         No hay productos registrados
                                     </td>
                                 </tr>
                             ) : (
                                 products.data.map((product) => (
                                     <tr key={product.id} className="border-b">
-                                        <td className="px-4 py-3 font-medium">{product.name}</td>
-                                        <td className="px-4 py-3">{product.category?.name || '-'}</td>
-                                        <td className="px-4 py-3">{product.unit?.name || '-'}</td>
+                                        <td className="px-4 py-3 font-medium">
+                                            {product.name}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {product.category?.name || '-'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {product.unit?.name || '-'}
+                                        </td>
                                         <td className="px-4 py-3 text-right">
-                                            S/ {parseFloat(product.sale_price).toFixed(2)}
+                                            S/{' '}
+                                            {parseFloat(
+                                                product.sale_price,
+                                            ).toFixed(2)}
                                         </td>
                                         <td className="px-4 py-3">
                                             <span
@@ -217,7 +257,9 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                                                         : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
                                                 }`}
                                             >
-                                                {product.active ? 'Activo' : 'Inactivo'}
+                                                {product.active
+                                                    ? 'Activo'
+                                                    : 'Inactivo'}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
@@ -226,11 +268,15 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Link
-                                                                href={ProductController.show.url(product.id)}
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                href={ProductController.show.url(
+                                                                    product.id,
+                                                                )}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                                             >
                                                                 <Eye className="h-4 w-4" />
-                                                                <span className="sr-only">Ver producto</span>
+                                                                <span className="sr-only">
+                                                                    Ver producto
+                                                                </span>
                                                             </Link>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
@@ -242,16 +288,26 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <button
-                                                                onClick={() => handleDeleteClick(product)}
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
+                                                                onClick={() =>
+                                                                    handleDeleteClick(
+                                                                        product,
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-red-600 transition-colors hover:bg-red-50 hover:text-red-800 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300"
                                                                 type="button"
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
-                                                                <span className="sr-only">Eliminar producto</span>
+                                                                <span className="sr-only">
+                                                                    Eliminar
+                                                                    producto
+                                                                </span>
                                                             </button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Eliminar producto</p>
+                                                            <p>
+                                                                Eliminar
+                                                                producto
+                                                            </p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
@@ -263,9 +319,13 @@ export default function ProductsIndex({ products, categories, filters, error }: 
                         </tbody>
                     </table>
                 </div>
+                <Pagination links={products.links} meta={products.meta} />
 
                 {/* Modal de confirmación de eliminación */}
-                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                <Dialog
+                    open={deleteDialogOpen}
+                    onOpenChange={setDeleteDialogOpen}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>¿Eliminar producto?</DialogTitle>
@@ -319,6 +379,3 @@ export default function ProductsIndex({ products, categories, filters, error }: 
         </AppLayout>
     );
 }
-
-
-

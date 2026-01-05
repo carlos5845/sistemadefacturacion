@@ -28,7 +28,7 @@ class CompanyPolicy
      */
     public function create(User $user): bool
     {
-        return $user->hasAnyRole(['admin', 'super-admin']);
+        return $user->hasAnyRole(['admin', 'super-admin']) || is_null($user->company_id);
     }
 
     /**

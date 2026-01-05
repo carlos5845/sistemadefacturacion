@@ -33,12 +33,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('product-categories', [\App\Http\Controllers\ProductCategoryController::class, 'store'])
         ->name('product-categories.store');
 
+        Route::get('documents/next-number', [DocumentController::class, 'getNextSeriesNumber'])
+            ->name('documents.next-number');
+
+        Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
+            ->name('documents.send-to-sunat');
+
         // Documents
         Route::resource('documents', DocumentController::class)
             ->middleware('can:viewAny,App\Models\Document');
 
-        Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
-            ->name('documents.send-to-sunat');
+        Route::get('documents/{document}/print', [DocumentController::class, 'print'])
+            ->name('documents.print');
 
         // Print route
         Route::get('documents/{document}/print', [DocumentController::class, 'print'])
@@ -53,6 +59,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('documents.xml.view');
         Route::get('documents/{document}/xml-signed/view', [DocumentController::class, 'viewXmlSigned'])
             ->name('documents.xml-signed.view');
+
+        // Consultas DNI/RUC
+        Route::get('consult/dni/{dni}', [App\Http\Controllers\ConsultController::class, 'dni'])->name('consult.dni');
+        Route::get('consult/ruc/{ruc}', [App\Http\Controllers\ConsultController::class, 'ruc'])->name('consult.ruc');
 });
 
 require __DIR__ . '/settings.php';

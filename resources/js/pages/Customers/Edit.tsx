@@ -57,6 +57,7 @@ export default function CustomersEdit({ customer }: Props) {
                     options={{
                         preserveScroll: true,
                     }}
+                    // @ts-ignore
                     defaults={{
                         identity_type: customer.identity_type,
                         identity_number: customer.identity_number,
@@ -70,25 +71,37 @@ export default function CustomersEdit({ customer }: Props) {
                         <>
                             <div className="grid gap-6 md:grid-cols-2">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="identity_type">Tipo de Documento *</Label>
+                                    <Label htmlFor="identity_type">
+                                        Tipo de Documento *
+                                    </Label>
                                     <select
                                         id="identity_type"
                                         name="identity_type"
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] md:text-sm"
+                                        className="flex h-9 w-full rounded-md border border-zinc-300 bg-white px-3 py-1 text-base text-zinc-900 shadow-xs transition-[color,box-shadow] outline-none placeholder:text-zinc-400 focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 md:text-sm dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-500"
                                         required
                                         defaultValue={customer.identity_type}
-                                        aria-invalid={errors.identity_type ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.identity_type
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     >
                                         <option value="DNI">DNI</option>
                                         <option value="RUC">RUC</option>
-                                        <option value="CE">Carnet de Extranjería</option>
+                                        <option value="CE">
+                                            Carnet de Extranjería
+                                        </option>
                                         <option value="PAS">Pasaporte</option>
                                     </select>
-                                    <InputError message={errors.identity_type} />
+                                    <InputError
+                                        message={errors.identity_type}
+                                    />
                                 </div>
 
                                 <div className="grid gap-2">
-                                    <Label htmlFor="identity_number">Número de Documento *</Label>
+                                    <Label htmlFor="identity_number">
+                                        Número de Documento *
+                                    </Label>
                                     <Input
                                         id="identity_number"
                                         name="identity_number"
@@ -96,20 +109,30 @@ export default function CustomersEdit({ customer }: Props) {
                                         maxLength={15}
                                         required
                                         defaultValue={customer.identity_number}
-                                        aria-invalid={errors.identity_number ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.identity_number
+                                                ? 'true'
+                                                : undefined
+                                        }
                                     />
-                                    <InputError message={errors.identity_number} />
+                                    <InputError
+                                        message={errors.identity_number}
+                                    />
                                 </div>
 
                                 <div className="grid gap-2 md:col-span-2">
-                                    <Label htmlFor="name">Nombre / Razón Social *</Label>
+                                    <Label htmlFor="name">
+                                        Nombre / Razón Social *
+                                    </Label>
                                     <Input
                                         id="name"
                                         name="name"
                                         type="text"
                                         required
                                         defaultValue={customer.name}
-                                        aria-invalid={errors.name ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.name ? 'true' : undefined
+                                        }
                                     />
                                     <InputError message={errors.name} />
                                 </div>
@@ -121,7 +144,9 @@ export default function CustomersEdit({ customer }: Props) {
                                         name="address"
                                         type="text"
                                         defaultValue={customer.address || ''}
-                                        aria-invalid={errors.address ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.address ? 'true' : undefined
+                                        }
                                     />
                                     <InputError message={errors.address} />
                                 </div>
@@ -133,7 +158,9 @@ export default function CustomersEdit({ customer }: Props) {
                                         name="email"
                                         type="email"
                                         defaultValue={customer.email || ''}
-                                        aria-invalid={errors.email ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.email ? 'true' : undefined
+                                        }
                                     />
                                     <InputError message={errors.email} />
                                 </div>
@@ -146,7 +173,9 @@ export default function CustomersEdit({ customer }: Props) {
                                         type="tel"
                                         maxLength={20}
                                         defaultValue={customer.phone || ''}
-                                        aria-invalid={errors.phone ? 'true' : undefined}
+                                        aria-invalid={
+                                            errors.phone ? 'true' : undefined
+                                        }
                                     />
                                     <InputError message={errors.phone} />
                                 </div>
@@ -154,9 +183,15 @@ export default function CustomersEdit({ customer }: Props) {
 
                             <div className="flex items-center gap-4">
                                 <Button type="submit" disabled={processing}>
-                                    {processing ? 'Guardando...' : 'Guardar Cambios'}
+                                    {processing
+                                        ? 'Guardando...'
+                                        : 'Guardar Cambios'}
                                 </Button>
-                                <Link href={CustomerController.show.url(customer.id)}>
+                                <Link
+                                    href={CustomerController.show.url(
+                                        customer.id,
+                                    )}
+                                >
                                     <Button type="button" variant="outline">
                                         Cancelar
                                     </Button>
@@ -174,6 +209,3 @@ export default function CustomersEdit({ customer }: Props) {
         </AppLayout>
     );
 }
-
-
-

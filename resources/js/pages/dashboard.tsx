@@ -168,7 +168,7 @@ export default function Dashboard({ stats, recentDocuments, error }: Props) {
                         <h2 className="text-lg font-semibold">
                             Documentos Recientes
                         </h2>
-                        <Link href={createDocument().url}>
+                        <Link href="/documents">
                             <Button variant="outline" size="sm">
                                 Ver Todos
                             </Button>

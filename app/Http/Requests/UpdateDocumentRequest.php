@@ -40,8 +40,8 @@ class UpdateDocumentRequest extends FormRequest
                     if ($value && $documentType) {
                         $customer = \App\Models\Customer::find($value);
                         if ($customer) {
-                            // Facturas (01) requieren RUC (schemeID=6)
-                            if ($documentType === '01' && $customer->identity_type !== '6') {
+                            // Facturas (01) requieren RUC (schemeID=6 or 'RUC')
+                            if ($documentType === '01' && !in_array($customer->identity_type, ['6', 'RUC'])) {
                                 $fail('Las facturas requieren un cliente con RUC. El cliente seleccionado no tiene RUC.');
                             }
                         }

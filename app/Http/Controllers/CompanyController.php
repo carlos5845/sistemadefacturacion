@@ -8,6 +8,7 @@ use App\Models\Company;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -18,13 +19,25 @@ class CompanyController extends Controller
      */
     public function index(Request $request): Response
     {
-        $companies = Company::query()
-            ->when($request->search, function ($query, $search) {
+        $user = $request->user();
+
+        // Si no es super-admin, solo ver su propia empresa
+        $query = Company::query();
+        
+        if (!$user->hasRole('super-admin') && $user->company_id) {
+            $query->where('id', $user->company_id);
+        } elseif (!$user->hasRole('super-admin') && !$user->company_id) {
+            // Usuario nuevo sin empresa: lista vacía (o podría ver nada)
+            // Pero como modificamos el Policy para create, aquí permitimos ver vacío para que cree.
+            $query->whereRaw('0 = 1'); 
+        }
+
+        $companies = $query->when($request->search, function ($query, $search) {
                 $query->where('business_name', 'like', "%{$search}%")
                     ->orWhere('ruc', 'like', "%{$search}%");
             })
             ->latest()
-            ->paginate(15);
+            ->paginate(12);
 
         return Inertia::render('Companies/Index', [
             'companies' => $companies,
@@ -64,26 +77,25 @@ class CompanyController extends Controller
                 mkdir($certificatesPath, 0755, true);
             }
 
-            // Generar nombre único para el archivo
-            $fileName = 'cert_' . time() . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+            // Generar nombre único/temporal para el archivo (se usará ID user temporalmente o similar si no hay ID company aún)
+            // Mejor usamos timestamp y random
+            $fileName = 'cert_new_' . time() . '_' . Str::random(10) . '.' . $file->getClientOriginalExtension();
             $filePath = $file->storeAs('certificates', $fileName, 'local');
 
-            // Guardar la ruta completa del archivo usando Storage::path() para normalizar rutas
+            // Guardar la ruta completa
             $data['certificate'] = Storage::disk('local')->path($filePath);
 
-            // Validar que el certificado se pueda leer con la contraseña proporcionada
+            // Validar que el certificado se pueda leer
             try {
                 $pkcs12 = file_get_contents($data['certificate']);
                 $certs = [];
                 if (! openssl_pkcs12_read($pkcs12, $certs, $data['certificate_password'])) {
-                    // Eliminar el archivo si no es válido
                     @unlink($data['certificate']);
                     return redirect()->back()
-                        ->withErrors(['certificate_file' => 'El certificado PFX/P12 no pudo ser leído. Verifique que la contraseña sea correcta y que el archivo sea válido.'])
+                        ->withErrors(['certificate_file' => 'El certificado PFX/P12 no pudo ser leído. Verifique la contraseña.'])
                         ->withInput();
                 }
             } catch (\Exception $e) {
-                // Eliminar el archivo si hay error
                 if (isset($data['certificate']) && file_exists($data['certificate'])) {
                     @unlink($data['certificate']);
                 }
@@ -91,20 +103,24 @@ class CompanyController extends Controller
                     ->withErrors(['certificate_file' => 'Error al validar el certificado: ' . $e->getMessage()])
                     ->withInput();
             }
-        }
+        }   
 
-        // Eliminar certificate_file del array ya que no es un campo de la base de datos
+        // Eliminar certificate_file del array
         unset($data['certificate_file']);
 
         $company = Company::create($data);
-
-        // Asociar automáticamente al usuario que crea la empresa
-        if (! $request->user()->company_id) {
-            $request->user()->update(['company_id' => $company->id]);
+        
+        // Si el certificado tenía un nombre temporal, podríamos renombrarlo con el ID de la empresa, 
+        // pero por ahora está bien con el timestamp/random para evitar complejidad.
+        
+        // Asignar la empresa al usuario creador si no tiene empresa (opcional, pero común)
+        $user = $request->user();
+        if (!$user->company_id && !$user->hasRole('super-admin')) {
+             $user->update(['company_id' => $company->id]);
         }
 
-        return redirect()->route('companies.index')
-            ->with('success', 'Empresa creada exitosamente. Tu usuario ha sido asociado automáticamente.');
+        return redirect()->route('companies.show', $company)
+            ->with('success', 'Empresa creada exitosamente.');
     }
 
     /**
@@ -112,6 +128,13 @@ class CompanyController extends Controller
      */
     public function show(Company $company): Response
     {
+        // Verificar autorización si no es super-admin
+        $user = request()->user();
+        if ($user->company_id !== $company->id && !$user->hasRole('super-admin')) {
+             abort(403);
+        }
+
+        $company->load(['users', 'customers', 'products', 'documents']);
         $company->loadCount(['users', 'customers', 'products', 'documents']);
 
         return Inertia::render('Companies/Show', [
