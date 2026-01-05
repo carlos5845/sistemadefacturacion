@@ -38,7 +38,7 @@ class ProductController extends Controller
                 })
                 ->with(['category', 'unit', 'taxType', 'company'])
                 ->latest()
-                ->paginate(15);
+                ->paginate(12);
 
             $categories = ProductCategory::orderBy('name')->get();
 
@@ -72,7 +72,7 @@ class ProductController extends Controller
             })
             ->with(['category', 'unit', 'taxType'])
             ->latest()
-            ->paginate(15);
+            ->paginate(12);
 
         $categories = ProductCategory::where('company_id', $companyId)
             ->orderBy('name')
@@ -99,7 +99,7 @@ class ProductController extends Controller
             return Inertia::render('Products/Create', [
                 'categories' => collect([]),
                 'units' => CatalogUnit::orderBy('name')->get(),
-                'taxTypes' => CatalogTaxType::orderBy('name')->get(),
+                'taxTypes' => CatalogTaxType::whereIn('code', ['10', '30'])->orderBy('name')->get(),
                 'error' => 'Como super-admin, debes seleccionar una empresa o asociarte a una para crear productos.',
             ]);
         }
@@ -119,7 +119,7 @@ class ProductController extends Controller
             ->get();
 
         $units = CatalogUnit::orderBy('name')->get();
-        $taxTypes = CatalogTaxType::orderBy('name')->get();
+        $taxTypes = CatalogTaxType::whereIn('code', ['10', '30'])->orderBy('name')->get();
 
         return Inertia::render('Products/Create', [
             'categories' => $categories,
@@ -177,7 +177,7 @@ class ProductController extends Controller
             ->get();
 
         $units = CatalogUnit::orderBy('name')->get();
-        $taxTypes = CatalogTaxType::orderBy('name')->get();
+        $taxTypes = CatalogTaxType::whereIn('code', ['10', '30'])->orderBy('name')->get();
 
         return Inertia::render('Products/Edit', [
             'product' => $product,

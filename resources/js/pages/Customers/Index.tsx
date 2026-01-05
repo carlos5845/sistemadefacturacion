@@ -5,6 +5,7 @@ import { Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ErrorModal } from '@/components/error-modal';
+import Pagination from '@/components/pagination';
 import { SuccessModal } from '@/components/success-modal';
 import { Button } from '@/components/ui/button';
 import {
@@ -268,6 +269,7 @@ export default function CustomersIndex({ customers, filters, error }: Props) {
                         </tbody>
                     </table>
                 </div>
+                <Pagination links={customers.links} meta={customers.meta} />
 
                 {/* Modal de confirmación de eliminación */}
                 <Dialog

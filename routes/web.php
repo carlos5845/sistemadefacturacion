@@ -33,12 +33,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('product-categories', [\App\Http\Controllers\ProductCategoryController::class, 'store'])
         ->name('product-categories.store');
 
+        Route::get('documents/next-number', [DocumentController::class, 'getNextSeriesNumber'])
+            ->name('documents.next-number');
+
+        Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
+            ->name('documents.send-to-sunat');
+
         // Documents
         Route::resource('documents', DocumentController::class)
             ->middleware('can:viewAny,App\Models\Document');
 
-        Route::post('documents/{document}/send-to-sunat', [DocumentController::class, 'sendToSunat'])
-            ->name('documents.send-to-sunat');
+        Route::get('documents/{document}/print', [DocumentController::class, 'print'])
+            ->name('documents.print');
 
         // XML download and view routes
         Route::get('documents/{document}/xml/download', [DocumentController::class, 'downloadXml'])

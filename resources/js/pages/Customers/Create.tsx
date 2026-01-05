@@ -173,10 +173,6 @@ export default function CustomersCreate({ error: propError }: Props) {
                                 <option value="">Seleccione...</option>
                                 <option value="DNI">DNI</option>
                                 <option value="RUC">RUC</option>
-                                <option value="CE">
-                                    Carnet de Extranjería
-                                </option>
-                                <option value="PAS">Pasaporte</option>
                             </select>
                             <InputError message={errors.identity_type} />
                         </div>

@@ -1,8 +1,7 @@
 import DocumentController from '@/actions/App/Http/Controllers/DocumentController';
-import { sendToSunat } from '@/routes/documents';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Pencil, Send } from 'lucide-react';
+import { ArrowLeft, Pencil, Printer, Send } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { ErrorModal } from '@/components/error-modal';
@@ -107,7 +106,7 @@ export default function DocumentsShow({ document }: Props) {
         if (confirm('¿Está seguro de enviar este documento a SUNAT?')) {
             setIsSending(true);
             router.post(
-                sendToSunat(document.id).url,
+                `/documents/${document.id}/send-to-sunat`,
                 {},
                 {
                     onFinish: () => {
@@ -226,6 +225,12 @@ export default function DocumentsShow({ document }: Props) {
                                 </TooltipProvider>
                             </>
                         )}
+                        <Link href={`/documents/${document.id}/print`}>
+                            <Button variant="outline">
+                                <Printer className="mr-2 h-4 w-4" />
+                                Imprimir
+                            </Button>
+                        </Link>
                         <Link href={index().url}>
                             <Button variant="outline">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
@@ -394,7 +399,7 @@ export default function DocumentsShow({ document }: Props) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {document.items.map((item) => (
+                                {document.items?.map((item) => (
                                     <tr key={item.id} className="border-b">
                                         <td className="px-4 py-2">
                                             {item.product && (

@@ -1,16 +1,11 @@
 import CompanyController from '@/actions/App/Http/Controllers/CompanyController';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState } from 'react';
 import { Eye, Trash2 } from 'lucide-react';
+import { useState } from 'react';
 
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip';
 import {
     Dialog,
     DialogContent,
@@ -20,8 +15,14 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import AppLayout from '@/layouts/app-layout';
-import { index, create } from '@/routes/companies';
+import { create, index } from '@/routes/companies';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -52,7 +53,9 @@ interface Props {
 
 export default function CompaniesIndex({ companies, filters }: Props) {
     const [search, setSearch] = useState(filters.search || '');
-    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(
+        null,
+    );
 
     const handleDelete = () => {
         if (!companyToDelete) return;
@@ -100,37 +103,60 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                         <thead>
                             <tr className="border-b">
                                 <th className="px-4 py-3 text-left">RUC</th>
-                                <th className="px-4 py-3 text-left">Razón Social</th>
-                                <th className="px-4 py-3 text-left">Nombre Comercial</th>
-                                <th className="px-4 py-3 text-left">Dirección</th>
-                                <th className="px-4 py-3 text-right">Acciones</th>
+                                <th className="px-4 py-3 text-left">
+                                    Razón Social
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                    Nombre Comercial
+                                </th>
+                                <th className="px-4 py-3 text-left">
+                                    Dirección
+                                </th>
+                                <th className="px-4 py-3 text-right">
+                                    Acciones
+                                </th>
                             </tr>
                         </thead>
                         <tbody>
                             {companies.data.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                                    <td
+                                        colSpan={5}
+                                        className="px-4 py-8 text-center text-muted-foreground"
+                                    >
                                         No hay empresas registradas
                                     </td>
                                 </tr>
                             ) : (
                                 companies.data.map((company) => (
                                     <tr key={company.id} className="border-b">
-                                        <td className="px-4 py-3">{company.ruc}</td>
-                                        <td className="px-4 py-3">{company.business_name}</td>
-                                        <td className="px-4 py-3">{company.trade_name || '-'}</td>
-                                        <td className="px-4 py-3">{company.address || '-'}</td>
+                                        <td className="px-4 py-3">
+                                            {company.ruc}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {company.business_name}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {company.trade_name || '-'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            {company.address || '-'}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-end">
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
                                                             <Link
-                                                                href={CompanyController.show.url(company.id)}
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                                href={CompanyController.show.url(
+                                                                    company.id,
+                                                                )}
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                                                             >
                                                                 <Eye className="h-4 w-4" />
-                                                                <span className="sr-only">Ver empresa</span>
+                                                                <span className="sr-only">
+                                                                    Ver empresa
+                                                                </span>
                                                             </Link>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
@@ -146,14 +172,23 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                                                onClick={() => setCompanyToDelete(company)}
+                                                                onClick={() =>
+                                                                    setCompanyToDelete(
+                                                                        company,
+                                                                    )
+                                                                }
                                                             >
                                                                 <Trash2 className="h-4 w-4" />
-                                                                <span className="sr-only">Eliminar empresa</span>
+                                                                <span className="sr-only">
+                                                                    Eliminar
+                                                                    empresa
+                                                                </span>
                                                             </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Eliminar empresa</p>
+                                                            <p>
+                                                                Eliminar empresa
+                                                            </p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
@@ -165,20 +200,31 @@ export default function CompaniesIndex({ companies, filters }: Props) {
                         </tbody>
                     </table>
                 </div>
+                <Pagination links={companies.links} meta={companies.meta} />
             </div>
 
-            <Dialog open={!!companyToDelete} onOpenChange={(open) => !open && setCompanyToDelete(null)}>
+            <Dialog
+                open={!!companyToDelete}
+                onOpenChange={(open) => !open && setCompanyToDelete(null)}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>¿Estás seguro?</DialogTitle>
                         <DialogDescription>
-                            Esta acción no se puede deshacer. Esto eliminará permanentemente la empresa
-                            <span className="font-medium text-foreground"> {companyToDelete?.business_name} </span>
+                            Esta acción no se puede deshacer. Esto eliminará
+                            permanentemente la empresa
+                            <span className="font-medium text-foreground">
+                                {' '}
+                                {companyToDelete?.business_name}{' '}
+                            </span>
                             y todos sus datos asociados.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setCompanyToDelete(null)}>
+                        <Button
+                            variant="outline"
+                            onClick={() => setCompanyToDelete(null)}
+                        >
                             Cancelar
                         </Button>
                         <Button variant="destructive" onClick={handleDelete}>
@@ -190,6 +236,3 @@ export default function CompaniesIndex({ companies, filters }: Props) {
         </AppLayout>
     );
 }
-
-
-

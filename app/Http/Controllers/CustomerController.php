@@ -30,7 +30,7 @@ class CustomerController extends Controller
                 })
                 ->with('company')
                 ->latest()
-                ->paginate(15);
+                ->paginate(12);
 
             return Inertia::render('Customers/Index', [
                 'customers' => $customers,
@@ -55,7 +55,7 @@ class CustomerController extends Controller
             })
             ->with('company')
             ->latest()
-            ->paginate(15);
+            ->paginate(12);
 
         return Inertia::render('Customers/Index', [
             'customers' => $customers,
