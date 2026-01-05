@@ -286,20 +286,17 @@ export default function DocumentsIndex({
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
-                                                            <Link
-<<<<<<< HEAD
-                                                                href={DocumentController.show.url(
-                                                                    document.id,
-                                                                )}
-=======
+                                                            <a
                                                                 href={`/documents/${document.id}/print`}
+                                                                target="_blank"
+                                                                rel="noopener noreferrer"
                                                                 className="inline-flex items-center justify-center rounded-md p-2 text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-50"
                                                             >
                                                                 <Printer className="h-4 w-4" />
                                                                 <span className="sr-only">
                                                                     Imprimir
                                                                 </span>
-                                                            </Link>
+                                                            </a>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
                                                             <p>
@@ -315,13 +312,11 @@ export default function DocumentsIndex({
                                                         <TooltipTrigger asChild>
                                                             <Link
                                                                 href={`/documents/${document.id}`}
->>>>>>> reniec
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                                                className="inline-flex items-center justify-center rounded-md p-2 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-900 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none dark:text-blue-400 dark:hover:bg-blue-950 dark:hover:text-blue-300"
                                                             >
                                                                 <Eye className="h-4 w-4" />
                                                                 <span className="sr-only">
                                                                     Ver
-                                                                    documento
                                                                 </span>
                                                             </Link>
                                                         </TooltipTrigger>
@@ -330,50 +325,7 @@ export default function DocumentsIndex({
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 </TooltipProvider>
-                                                <TooltipProvider>
-                                                    <Tooltip>
-                                                        <TooltipTrigger asChild>
-                                                            <a
-                                                                href={`/documents/${document.id}/print`}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="inline-flex items-center justify-center rounded-md p-2 text-primary transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                                            >
-                                                                <svg
-                                                                    xmlns="http://www.w3.org/2000/svg"
-                                                                    width="24"
-                                                                    height="24"
-                                                                    viewBox="0 0 24 24"
-                                                                    fill="none"
-                                                                    stroke="currentColor"
-                                                                    strokeWidth="2"
-                                                                    strokeLinecap="round"
-                                                                    strokeLinejoin="round"
-                                                                    className="h-4 w-4"
-                                                                >
-                                                                    <polyline points="6 9 6 2 18 2 18 9" />
-                                                                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                                                                    <rect
-                                                                        width="12"
-                                                                        height="8"
-                                                                        x="6"
-                                                                        y="14"
-                                                                    />
-                                                                </svg>
-                                                                <span className="sr-only">
-                                                                    Imprimir
-                                                                    documento
-                                                                </span>
-                                                            </a>
-                                                        </TooltipTrigger>
-                                                        <TooltipContent>
-                                                            <p>
-                                                                Imprimir
-                                                                documento
-                                                            </p>
-                                                        </TooltipContent>
-                                                    </Tooltip>
-                                                </TooltipProvider>
+
                                                 <TooltipProvider>
                                                     <Tooltip>
                                                         <TooltipTrigger asChild>
