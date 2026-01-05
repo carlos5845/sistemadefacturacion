@@ -12,6 +12,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         // SQLite: Recrear tabla para cambiar tipo de columna y convertir datos
         Schema::dropIfExists('customers_temp');
 
@@ -48,6 +50,8 @@ return new class extends Migration
 
         Schema::dropIfExists('customers');
         Schema::rename('customers_temp', 'customers');
+
+        Schema::enableForeignKeyConstraints();
     }
 
     /**
