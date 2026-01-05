@@ -86,12 +86,12 @@ export default function CustomersEdit({ customer }: Props) {
                                                 : undefined
                                         }
                                     >
-                                        <option value="DNI">DNI</option>
-                                        <option value="RUC">RUC</option>
-                                        <option value="CE">
+                                        <option value="1">DNI</option>
+                                        <option value="6">RUC</option>
+                                        <option value="4">
                                             Carnet de Extranjería
                                         </option>
-                                        <option value="PAS">Pasaporte</option>
+                                        <option value="7">Pasaporte</option>
                                     </select>
                                     <InputError
                                         message={errors.identity_type}

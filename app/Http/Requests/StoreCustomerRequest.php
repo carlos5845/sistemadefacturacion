@@ -28,7 +28,7 @@ class StoreCustomerRequest extends FormRequest
 
         return [
             'company_id' => ['nullable', 'exists:companies,id'],
-            'identity_type' => ['required', 'string', Rule::in(['DNI', 'RUC', 'CE', 'PAS'])],
+            'identity_type' => ['required', 'string', Rule::in(['1', '6', '4', '7'])],
             'identity_number' => [
                 'required',
                 'string',
@@ -54,7 +54,7 @@ class StoreCustomerRequest extends FormRequest
     {
         return [
             'identity_type.required' => 'El tipo de documento es obligatorio.',
-            'identity_type.in' => 'El tipo de documento debe ser DNI, RUC, CE o PAS.',
+            'identity_type.in' => 'El tipo de documento seleccionado no es válido.',
             'identity_number.required' => 'El número de documento es obligatorio.',
             'identity_number.unique' => 'Este cliente ya está registrado.',
             'name.required' => 'El nombre es obligatorio.',

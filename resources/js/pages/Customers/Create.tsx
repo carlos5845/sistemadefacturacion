@@ -69,8 +69,8 @@ export default function CustomersCreate({ error: propError }: Props) {
     };
 
     const getIdentityType = (type: string) => {
-        if (type === 'DNI') return 'dni';
-        if (type === 'RUC') return 'ruc';
+        if (type === '1') return 'dni';
+        if (type === '6') return 'ruc';
         return null;
     };
 
@@ -171,8 +171,8 @@ export default function CustomersCreate({ error: propError }: Props) {
                                 }
                             >
                                 <option value="">Seleccione...</option>
-                                <option value="DNI">DNI</option>
-                                <option value="RUC">RUC</option>
+                                <option value="1">DNI</option>
+                                <option value="6">RUC</option>
                             </select>
                             <InputError message={errors.identity_type} />
                         </div>

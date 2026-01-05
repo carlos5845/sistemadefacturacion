@@ -18,16 +18,16 @@ class CustomerFactory extends Factory
      */
     public function definition(): array
     {
-        $identityType = fake()->randomElement(['DNI', 'RUC', 'CE', 'PAS']);
+        $identityType = fake()->randomElement(['1', '6', '4', '7']);
 
         return [
             'company_id' => Company::factory(),
             'identity_type' => $identityType,
             'identity_number' => match ($identityType) {
-                'DNI' => fake()->unique()->numerify('########'),
-                'RUC' => fake()->unique()->numerify('20#########'),
-                'CE' => fake()->unique()->bothify('??########'),
-                'PAS' => fake()->unique()->bothify('??########'),
+                '1' => fake()->unique()->numerify('########'),
+                '6' => fake()->unique()->numerify('20#########'),
+                '4' => fake()->unique()->bothify('??########'),
+                '7' => fake()->unique()->bothify('??########'),
                 default => fake()->unique()->numerify('########'),
             },
             'name' => fake()->name(),
