@@ -48,7 +48,7 @@ class XmlGeneratorService
         $xml .= ' xmlns:xades="http://uri.etsi.org/01903/v1.3.2#"';
         $xml .= ' xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' . "\n";
 
-        // UBLExtensions (requerido por SUNAT)
+        // UBLExtensions 
         $xml .= '  <ext:UBLExtensions>' . "\n";
         $xml .= '    <ext:UBLExtension>' . "\n";
         $xml .= '      <ext:ExtensionContent/>' . "\n";

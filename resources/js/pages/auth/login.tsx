@@ -24,8 +24,8 @@ export default function Login({
 }: LoginProps) {
     return (
         <AuthLayout
-            title="Log in to your account"
-            description="Enter your email and password below to log in"
+            title="Inicia sesión en tu cuenta"
+            description="Ingrese su correo electrónico y contraseña a continuación para iniciar sesión"
         >
             <Head title="Log in" />
 
