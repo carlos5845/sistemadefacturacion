@@ -11,9 +11,9 @@ export default function Welcome() {
             <Head title="Bienvenido" />
 
             {/* Main Wrapper - Black Background */}
-            <div className="min-h-screen bg-black text-zinc-100 selection:bg-blue-600 selection:text-white">
+            <div className="min-h-screen bg-[url('/Hero20V32037.png')] bg-cover bg-center text-zinc-100 selection:bg-blue-600 selection:text-white">
                 {/* Navbar */}
-                <header className="sticky top-0 z-50 border-b border-zinc-900 bg-black/50 backdrop-blur-sm">
+                <header className="sticky top-0 z-50 bg-transparent backdrop-blur-sm">
                     <div className="container mx-auto flex h-16 items-center justify-between px-6">
                         {/* Logo */}
                         <div className="flex items-center gap-2 text-xl font-bold tracking-tighter">
@@ -85,7 +85,7 @@ export default function Welcome() {
                         </Link>
                         <a
                             href="#features"
-                            className="inline-flex h-12 items-center justify-center rounded-md border border-zinc-800 bg-transparent px-8 text-sm font-medium text-zinc-300 shadow-sm transition-colors hover:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-zinc-300 focus-visible:outline-none"
+                            className="inline-flex h-12 items-center justify-center rounded-md border border-zinc-500 bg-transparent px-8 text-sm font-medium text-zinc-300 shadow-sm transition-colors hover:bg-zinc-900 focus-visible:ring-1 focus-visible:ring-zinc-300 focus-visible:outline-none"
                         >
                             Conocer más
                         </a>
@@ -93,13 +93,10 @@ export default function Welcome() {
                 </section>
 
                 {/* Features Grid */}
-                <section
-                    id="features"
-                    className="container mx-auto border-t border-zinc-900 px-6 py-24"
-                >
+                <section id="features" className="container mx-auto px-6 py-24">
                     <div className="grid gap-8 md:grid-cols-3">
                         {/* Feature 1 */}
-                        <div className="group rounded-2xl border border-zinc-900 bg-zinc-950 p-8 transition-colors hover:border-blue-900/50">
+                        <div className="group rounded-2xl border border-zinc-900 bg-black/70 p-8 backdrop-blur-sm transition-colors hover:border-blue-900/50">
                             <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-blue-900/20 text-blue-500">
                                 <ShieldCheck className="size-5" />
                             </div>
@@ -114,7 +111,7 @@ export default function Welcome() {
                         </div>
 
                         {/* Feature 2 */}
-                        <div className="group rounded-2xl border border-zinc-900 bg-zinc-950 p-8 transition-colors hover:border-blue-900/50">
+                        <div className="group rounded-2xl border border-zinc-900 bg-black/70 p-8 backdrop-blur-sm transition-colors hover:border-blue-900/50">
                             <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-blue-900/20 text-blue-500">
                                 <BarChart3 className="size-5" />
                             </div>
@@ -128,7 +125,7 @@ export default function Welcome() {
                         </div>
 
                         {/* Feature 3 */}
-                        <div className="group rounded-2xl border border-zinc-900 bg-zinc-950 p-8 transition-colors hover:border-blue-900/50">
+                        <div className="group rounded-2xl border border-zinc-900 bg-black/70 p-8 backdrop-blur-sm transition-colors hover:border-blue-900/50">
                             <div className="mb-4 inline-flex size-10 items-center justify-center rounded-lg bg-blue-900/20 text-blue-500">
                                 <CheckCircle2 className="size-5" />
                             </div>
@@ -144,7 +141,7 @@ export default function Welcome() {
                 </section>
 
                 {/* Footer */}
-                <footer className="border-t border-zinc-900 bg-black py-12">
+                <footer className="bg-gradient-to-t from-black from-50% via-black via-80% to-transparent to-100% py-12">
                     <div className="container mx-auto flex flex-col items-center justify-between gap-6 px-6 md:flex-row">
                         <div className="text-sm text-zinc-500">
                             © 2024 FacturaPro. Todos los derechos reservados.
